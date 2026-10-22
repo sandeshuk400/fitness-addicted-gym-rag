@@ -1,0 +1,8 @@
+logging:
+  level:
+    com.fitnessaddicted: DEBUG
+    org.springframework.ai: INFO
+
+spring:
+  jpa:
+    show-sql: false

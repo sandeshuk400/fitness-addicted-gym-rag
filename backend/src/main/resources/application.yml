@@ -1,0 +1,65 @@
+spring:
+  application:
+    name: fitness-addicted-gym
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/gymdb}
+    username: ${DB_USER:gym}
+    password: ${DB_PASSWORD:gym_dev_password}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # schema is owned by Flyway, Hibernate only validates it
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  ai:
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      init:
+        pull-model-strategy: when_missing   # download models on first start if absent
+        timeout: 15m
+      chat:
+        options:
+          model: ${OLLAMA_CHAT_MODEL:llama3.2}
+          temperature: 0.2                  # low temperature: factual, consistent answers
+      embedding:
+        options:
+          model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+    vectorstore:
+      pgvector:
+        initialize-schema: false            # table is created by Flyway (V2)
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 768                     # must match the embedding model
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  security:
+    # Replace in every real environment. Used for JWT signing in Phase 1.
+    jwt-secret: ${JWT_SECRET:change-me-in-real-environments-min-32-chars}
+    jwt-access-ttl-minutes: 15
+    jwt-refresh-ttl-days: 7
+  rag:
+    top-k: 5
+    similarity-threshold: 0.55
+    chunk-size-tokens: 500

@@ -1,0 +1,80 @@
+# Local development stack.
+#
+#   docker compose up -d db                      -> PostgreSQL + pgvector only
+#   docker compose --profile ollama up -d        -> also runs Ollama in a container
+#
+# Tip: on macOS (Apple Silicon) and on machines with a GPU, installing Ollama natively usually
+# performs better than running it in Docker. In that case just start `db` and run Ollama yourself
+# (default http://localhost:11434).
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: gym-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-gymdb}
+      POSTGRES_USER: ${DB_USER:-gym}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-gym_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - gym-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-gym} -d ${DB_NAME:-gymdb}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: gym-ollama
+    profiles: ["ollama"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - gym-ollama-models:/root/.ollama
+    restart: unless-stopped
+    # For NVIDIA GPUs, uncomment:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # Pulls the chat and embedding models once, then exits.
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: gym-ollama-init
+    profiles: ["ollama"]
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama pull ${OLLAMA_CHAT_MODEL:-llama3.2}
+        ollama pull ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+    restart: "no"
+
+  # Enabled in Phase 4 (hosting). Build context is the backend folder.
+  # backend:
+  #   build: ./backend
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   environment:
+  #     DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-gymdb}
+  #     DB_USER: ${DB_USER:-gym}
+  #     DB_PASSWORD: ${DB_PASSWORD:-gym_dev_password}
+  #     OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+  #     JWT_SECRET: ${JWT_SECRET}
+  #   ports:
+  #     - "8080:8080"
+
+volumes:
+  gym-db-data:
+  gym-ollama-models:
