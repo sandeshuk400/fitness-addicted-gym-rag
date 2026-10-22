@@ -18,6 +18,8 @@ import com.fitnessaddicted.gym.membership.domain.Subscription;
 import com.fitnessaddicted.gym.membership.domain.SubscriptionStatus;
 import com.fitnessaddicted.gym.membership.repository.MembershipPlanRepository;
 import com.fitnessaddicted.gym.membership.repository.SubscriptionRepository;
+import com.fitnessaddicted.gym.payment.domain.PaymentMethod;
+import com.fitnessaddicted.gym.payment.service.PaymentService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Rules: a member has at most one running (ACTIVE or FROZEN) subscription; later purchases are queued
  * as PENDING and start the day after the previous one ends. Freezing extends the end date (and shifts
- * queued subscriptions) so no paid time is lost. Payments are recorded by the payment module in Phase 2.
+ * queued subscriptions) so no paid time is lost. Every sale records its payment in the same transaction.
  */
 @Service
 public class SubscriptionService {
@@ -39,21 +41,33 @@ public class SubscriptionService {
     private final MembershipPlanRepository plans;
     private final MemberProfileService members;
     private final AuditService audit;
+    private final PaymentService payments;
     private final int maxFreezeDays;
 
     public SubscriptionService(SubscriptionRepository subscriptions, MembershipPlanRepository plans,
-                               MemberProfileService members, AuditService audit,
+                               MemberProfileService members, AuditService audit, PaymentService payments,
                                @Value("${app.membership.max-freeze-days:30}") int maxFreezeDays) {
         this.subscriptions = subscriptions;
         this.plans = plans;
         this.members = members;
         this.audit = audit;
+        this.payments = payments;
         this.maxFreezeDays = maxFreezeDays;
     }
 
-    /** Staff sells a plan to a member. Starts today, or the day after the member's current plan ends. */
+    /** Kept so older callers still compile. Records a CASH payment with no reference. */
     @Transactional
     public SubscriptionResponse purchase(Long actorId, Long memberId, Long planId) {
+        return purchase(actorId, memberId, planId, PaymentMethod.CASH, null);
+    }
+
+    /**
+     * Staff sells a plan to a member and records the payment. Starts today, or the day after the
+     * member's current plan ends.
+     */
+    @Transactional
+    public SubscriptionResponse purchase(Long actorId, Long memberId, Long planId,
+                                         PaymentMethod method, String reference) {
         if (!members.exists(memberId)) {
             throw ApiException.notFound("Member not found");
         }
@@ -68,6 +82,7 @@ public class SubscriptionService {
         SubscriptionStatus status = start.isAfter(today) ? SubscriptionStatus.PENDING : SubscriptionStatus.ACTIVE;
 
         Subscription saved = subscriptions.save(new Subscription(memberId, planId, start, end, status));
+        payments.recordSale(actorId, saved, plan, method, reference);
         audit.record(actorId, "SUBSCRIPTION_CREATED", "Subscription", String.valueOf(saved.getId()),
                 Map.of("memberId", memberId, "plan", plan.getName(), "startDate", start.toString()));
         return toResponse(saved);

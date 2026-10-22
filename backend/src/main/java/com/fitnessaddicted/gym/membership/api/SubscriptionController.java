@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.fitnessaddicted.gym.payment.domain.PaymentMethod;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -46,9 +47,11 @@ public class SubscriptionController {
     @PostMapping("/members/{memberId}/subscriptions")
     @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
-    public SubscriptionResponse purchase(@AuthenticationPrincipal Jwt jwt, @PathVariable Long memberId,
+                public SubscriptionResponse purchase(@AuthenticationPrincipal Jwt jwt, @PathVariable Long memberId,
                                          @Valid @RequestBody PurchaseRequest request) {
-        return subscriptionService.purchase(CurrentUser.id(jwt), memberId, request.planId());
+        PaymentMethod method = request.method() == null ? PaymentMethod.CASH : request.method();
+        return subscriptionService.purchase(CurrentUser.id(jwt), memberId, request.planId(),
+                method, request.reference());
     }
 
     /** Memberships ending within the next N days (default 7), for renewal follow-up. */
