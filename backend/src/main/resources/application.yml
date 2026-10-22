@@ -59,6 +59,14 @@ app:
     jwt-secret: ${JWT_SECRET:change-me-in-real-environments-min-32-chars}
     jwt-access-ttl-minutes: 15
     jwt-refresh-ttl-days: 7
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}   # comma-separated
+  bootstrap-admin:
+    # If both are set and no ADMIN exists, an admin is created at startup (needed to create staff).
+    email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  membership:
+    max-freeze-days: 30   # per subscription; freezing extends the end date by the same number of days
   rag:
     top-k: 5
     similarity-threshold: 0.55

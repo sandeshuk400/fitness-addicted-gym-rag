@@ -12,6 +12,7 @@ erDiagram
     APP_USER ||--o{ CONSENT_RECORD : gives
     APP_USER ||--o{ NOTIFICATION : receives
     APP_USER ||--o{ AUDIT_LOG : "acts in"
+    APP_USER ||--o{ REFRESH_TOKEN : "signs in with"
     APP_USER ||--o{ CHAT_CONVERSATION : starts
 
     MEMBER_PROFILE ||--o{ SUBSCRIPTION : holds
@@ -73,6 +74,15 @@ erDiagram
         date end_date
         varchar status "PENDING|ACTIVE|FROZEN|EXPIRED|CANCELLED"
         date frozen_until
+        int frozen_days_used "limit per subscription, default 30"
+    }
+    REFRESH_TOKEN {
+        bigint id PK
+        bigint user_id FK
+        varchar token_hash UK "SHA-256, never the raw token"
+        timestamptz expires_at
+        timestamptz revoked_at
+        timestamptz created_at
     }
     PAYMENT {
         bigint id PK

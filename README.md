@@ -79,12 +79,18 @@ Then open:
 - Health: http://localhost:8080/actuator/health
 - API docs: http://localhost:8080/swagger-ui.html
 
-Flyway creates the schema on first start (`V1` core, `V2` AI tables, `V3` sample plans).
+Flyway creates the schema on first start (`V1` core, `V2` AI tables, `V3` sample plans, `V4` refresh tokens,
+`V5` freeze tracking). To sign in as admin, set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` first
+(see [docs/api.md](docs/api.md)).
 
 ## Roadmap
 
 - [x] **Phase 0:** architecture docs, ER diagram, schema v1, project skeleton, Docker Compose
 - [ ] **Phase 1:** auth + roles, members, plans, subscriptions, attendance, React shell
+  - [x] Part 1: JWT auth, roles, member profiles, consent ([API](docs/api.md))
+  - [x] Part 2: membership plans, subscriptions (queue, freeze, cancel, daily expiry)
+  - [x] Part 3: attendance (front-desk check-in / check-out, occupancy; QR self check-in later)
+  - [ ] Part 4: React shell
 - [ ] **Phase 2:** classes and bookings, payments, notifications, trainer plans
 - [ ] **Phase 3:** document ingestion, RAG chat, tool calling, guardrails, evaluation set
 - [ ] **Phase 4:** CI/CD, observability, backups, hosting

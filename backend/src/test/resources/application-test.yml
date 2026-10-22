@@ -1,0 +1,10 @@
+spring:
+  ai:
+    ollama:
+      init:
+        pull-model-strategy: never   # tests must not contact or download from Ollama
+
+app:
+  bootstrap-admin:
+    email: admin@test.local
+    password: Admin#12345
