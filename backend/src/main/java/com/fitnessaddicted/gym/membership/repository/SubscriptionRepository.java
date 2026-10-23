@@ -4,16 +4,19 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
-import com.fitnessaddicted.gym.membership.domain.Subscription;
-import com.fitnessaddicted.gym.membership.domain.SubscriptionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.fitnessaddicted.gym.membership.domain.Subscription;
+import com.fitnessaddicted.gym.membership.domain.SubscriptionStatus;
+
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
 
     List<Subscription> findByMemberIdOrderByStartDateDesc(Long memberId);
+
+    List<Subscription> findByMemberIdAndStatusOrderByStartDateAsc(Long memberId, SubscriptionStatus status);
 
     List<Subscription> findByMemberIdAndStatusAndStartDateAfter(Long memberId, SubscriptionStatus status,
                                                                 LocalDate after);

@@ -8,6 +8,10 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.fitnessaddicted.gym.common.ApiException;
 import com.fitnessaddicted.gym.common.AppTime;
 import com.fitnessaddicted.gym.common.AuditService;
@@ -20,9 +24,6 @@ import com.fitnessaddicted.gym.membership.repository.MembershipPlanRepository;
 import com.fitnessaddicted.gym.membership.repository.SubscriptionRepository;
 import com.fitnessaddicted.gym.payment.domain.PaymentMethod;
 import com.fitnessaddicted.gym.payment.service.PaymentService;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Subscription lifecycle: buy (current or queued), freeze, unfreeze, cancel, and the daily status refresh.
@@ -30,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Rules: a member has at most one running (ACTIVE or FROZEN) subscription; later purchases are queued
  * as PENDING and start the day after the previous one ends. Freezing extends the end date (and shifts
  * queued subscriptions) so no paid time is lost. Every sale records its payment in the same transaction.
+ * Cancelling or refunding a running plan moves queued plans up so the member has no gap.
  */
 @Service
 public class SubscriptionService {
@@ -42,16 +44,19 @@ public class SubscriptionService {
     private final MemberProfileService members;
     private final AuditService audit;
     private final PaymentService payments;
+    private final SubscriptionQueue queue;
     private final int maxFreezeDays;
 
     public SubscriptionService(SubscriptionRepository subscriptions, MembershipPlanRepository plans,
                                MemberProfileService members, AuditService audit, PaymentService payments,
+                               SubscriptionQueue queue,
                                @Value("${app.membership.max-freeze-days:30}") int maxFreezeDays) {
         this.subscriptions = subscriptions;
         this.plans = plans;
         this.members = members;
         this.audit = audit;
         this.payments = payments;
+        this.queue = queue;
         this.maxFreezeDays = maxFreezeDays;
     }
 
@@ -146,7 +151,7 @@ public class SubscriptionService {
         return toResponse(s);
     }
 
-    /** Staff-only (controller enforces the role). Queued subscriptions keep their own start dates. */
+    /** Staff-only (controller enforces the role). Queued subscriptions move up to follow what is still running. */
     @Transactional
     public SubscriptionResponse cancel(Long actorId, Long subscriptionId) {
         Subscription s = subscriptions.findById(subscriptionId)
@@ -155,6 +160,7 @@ public class SubscriptionService {
             throw ApiException.badRequest("This membership is already " + s.getStatus().name().toLowerCase());
         }
         s.cancel();
+        queue.compact(s.getMemberId());
         audit.record(actorId, "SUBSCRIPTION_CANCELLED", "Subscription", String.valueOf(subscriptionId), Map.of());
         return toResponse(s);
     }

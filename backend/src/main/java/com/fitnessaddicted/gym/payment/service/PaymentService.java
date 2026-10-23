@@ -3,8 +3,11 @@ package com.fitnessaddicted.gym.payment.service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.fitnessaddicted.gym.common.ApiException;
 import com.fitnessaddicted.gym.common.AppTime;
@@ -13,14 +16,12 @@ import com.fitnessaddicted.gym.membership.domain.MembershipPlan;
 import com.fitnessaddicted.gym.membership.domain.Subscription;
 import com.fitnessaddicted.gym.membership.domain.SubscriptionStatus;
 import com.fitnessaddicted.gym.membership.repository.SubscriptionRepository;
+import com.fitnessaddicted.gym.membership.service.SubscriptionQueue;
 import com.fitnessaddicted.gym.payment.api.PaymentResponse;
 import com.fitnessaddicted.gym.payment.domain.Payment;
 import com.fitnessaddicted.gym.payment.domain.PaymentMethod;
 import com.fitnessaddicted.gym.payment.domain.PaymentStatus;
 import com.fitnessaddicted.gym.payment.repository.PaymentRepository;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Manual (front-desk) payments. A sale records its payment in the caller's transaction, so a subscription
@@ -32,13 +33,15 @@ public class PaymentService {
 
     private final PaymentRepository payments;
     private final SubscriptionRepository subscriptions;
+    private final SubscriptionQueue queue;
     private final AuditService audit;
     private final JdbcTemplate jdbc;
 
     public PaymentService(PaymentRepository payments, SubscriptionRepository subscriptions,
-                          AuditService audit, JdbcTemplate jdbc) {
+                          SubscriptionQueue queue, AuditService audit, JdbcTemplate jdbc) {
         this.payments = payments;
         this.subscriptions = subscriptions;
+        this.queue = queue;
         this.audit = audit;
         this.jdbc = jdbc;
     }
@@ -62,7 +65,10 @@ public class PaymentService {
         return toResponses(payments.findByMemberId(memberId));
     }
 
-    /** Admin only (controller enforces it). Also cancels the subscription the payment bought. */
+    /**
+     * Admin only (controller enforces it). Also cancels the subscription the payment bought and moves
+     * the member's queued plans up so there is no gap.
+     */
     @Transactional
     public PaymentResponse refund(Long actorId, Long paymentId, String reason) {
         Payment p = payments.findForUpdate(paymentId)
@@ -74,6 +80,7 @@ public class PaymentService {
         subscriptions.findById(p.getSubscriptionId()).ifPresent(s -> {
             if (s.getStatus() != SubscriptionStatus.CANCELLED && s.getStatus() != SubscriptionStatus.EXPIRED) {
                 s.cancel();
+                queue.compact(s.getMemberId());
             }
         });
         audit.record(actorId, "PAYMENT_REFUNDED", "Payment", String.valueOf(paymentId),

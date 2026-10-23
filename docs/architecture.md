@@ -141,7 +141,7 @@ sequenceDiagram
 
 | Decision | Choice | Why |
 |---|---|---|
-| Language / runtime | Java 21 | LTS, virtual threads, records |
+| Language / runtime | Java 25 | LTS, virtual threads, records |
 | Framework | Spring Boot 3.5.x | Stable line; Spring AI 1.1.x targets it |
 | AI integration | Spring AI 1.1.x | ChatClient, advisors, tool calling, PgVectorStore |
 | LLM runtime | Ollama (local models) | Free, private, no per-token cost; swappable via Spring AI |

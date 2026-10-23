@@ -1,6 +1,6 @@
 # Fitness Addicted Gym
 
-An AI-powered gym management system built with **Java 21, Spring Boot and Spring AI**. It combines the
+An AI-powered gym management system built with **Java 25, Spring Boot and Spring AI**. It combines the
 everyday operations of a gym (members, memberships, attendance, classes, payments) with a
 **RAG-based assistant** that answers questions from the gym's own documents and live data, running
 on **local open models through Ollama**.
@@ -46,7 +46,7 @@ Details: [docs/architecture.md](docs/architecture.md) | [docs/er-diagram.md](doc
 
 | Layer | Technology |
 |---|---|
-| Backend | Java 21, Spring Boot 3.5, Spring Security (JWT), Spring Data JPA |
+| Backend | Java 25, Spring Boot 3.5, Spring Security (JWT), Spring Data JPA |
 | AI | Spring AI 1.1, Ollama (`llama3.2`, `nomic-embed-text`), PgVectorStore |
 | Database | PostgreSQL 16 + pgvector, Flyway migrations |
 | Frontend | React + TypeScript (Vite), planned |
@@ -54,7 +54,7 @@ Details: [docs/architecture.md](docs/architecture.md) | [docs/er-diagram.md](doc
 
 ## Quick start (local)
 
-Prerequisites: JDK 21, Maven 3.9+, Docker.
+Prerequisites: JDK 25, Maven 3.9+, Docker.
 
 ```bash
 # 1. Configure

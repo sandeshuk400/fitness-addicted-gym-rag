@@ -2,6 +2,7 @@ package com.fitnessaddicted.gym.membership.domain;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -88,6 +89,14 @@ public class Subscription {
     public void shift(int days) {
         this.startDate = startDate.plusDays(days);
         this.endDate = endDate.plusDays(days);
+    }
+
+    /** Moves a queued subscription to a new start date, keeping its length. */
+    public void reschedule(LocalDate newStart, SubscriptionStatus newStatus) {
+        long lengthInDays = ChronoUnit.DAYS.between(startDate, endDate);
+        this.startDate = newStart;
+        this.endDate = newStart.plusDays(lengthInDays);
+        this.status = newStatus;
     }
 
     public Long getId() {

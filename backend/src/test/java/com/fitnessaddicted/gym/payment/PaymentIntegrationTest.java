@@ -1,19 +1,13 @@
 package com.fitnessaddicted.gym.payment;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,10 +17,17 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fitnessaddicted.gym.common.AppTime;
 
 /**
  * End-to-end tests for manual payments: sale records a payment, receipts, access rules, refunds.
@@ -273,5 +274,29 @@ class PaymentIntegrationTest {
                         .header("Authorization", adminToken())
                         .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("reason", "x"))))
                 .andExpect(status().isNotFound());
+    }
+        @Test
+    void refundingTheRunningPlanMovesTheQueuedPlanUpToToday() throws Exception {
+        String staff = staffToken();
+        Member member = newMember();
+        sell(staff, member.id(), Map.of("planId", plan("Monthly").get("id").asLong()));
+        sell(staff, member.id(), Map.of("planId", plan("Quarterly").get("id").asLong()));
+
+        // Newest first, so index 1 is the Monthly sale.
+        long monthlyPaymentId = myPayments(member).get(1).get("id").asLong();
+        mockMvc.perform(post("/api/v1/payments/" + monthlyPaymentId + "/refund")
+                        .header("Authorization", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("reason", "Moved"))))
+                .andExpect(status().isOk());
+
+        boolean found = false;
+        for (JsonNode sub : mySubscriptions(member)) {
+            if (sub.get("planName").asText().equals("Quarterly")) {
+                found = true;
+                assertEquals("ACTIVE", sub.get("status").asText());
+                assertEquals(AppTime.today().toString(), sub.get("startDate").asText());
+            }
+        }
+        assertTrue(found);
     }
 }
