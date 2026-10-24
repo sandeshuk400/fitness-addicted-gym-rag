@@ -17,6 +17,7 @@ import com.fitnessaddicted.gym.membership.domain.Subscription;
 import com.fitnessaddicted.gym.membership.domain.SubscriptionStatus;
 import com.fitnessaddicted.gym.membership.repository.SubscriptionRepository;
 import com.fitnessaddicted.gym.membership.service.SubscriptionQueue;
+import com.fitnessaddicted.gym.notification.service.PaymentNotificationService;
 import com.fitnessaddicted.gym.payment.api.PaymentResponse;
 import com.fitnessaddicted.gym.payment.domain.Payment;
 import com.fitnessaddicted.gym.payment.domain.PaymentMethod;
@@ -36,14 +37,17 @@ public class PaymentService {
     private final SubscriptionQueue queue;
     private final AuditService audit;
     private final JdbcTemplate jdbc;
+    private final PaymentNotificationService paymentNotices;
 
     public PaymentService(PaymentRepository payments, SubscriptionRepository subscriptions,
-                          SubscriptionQueue queue, AuditService audit, JdbcTemplate jdbc) {
+                          SubscriptionQueue queue, AuditService audit, JdbcTemplate jdbc,
+                          PaymentNotificationService paymentNotices) {
         this.payments = payments;
         this.subscriptions = subscriptions;
         this.queue = queue;
         this.audit = audit;
         this.jdbc = jdbc;
+        this.paymentNotices = paymentNotices;
     }
 
     /** Amount is the plan price as of now, never supplied by the client. */
@@ -57,6 +61,8 @@ public class PaymentService {
         audit.record(actorId, "PAYMENT_RECORDED", "Payment", String.valueOf(saved.getId()),
                 Map.of("subscriptionId", subscription.getId(), "amount", saved.getAmount().toPlainString(),
                         "method", method.name(), "receipt", receipt));
+        paymentNotices.sendReceipt(subscription.getMemberId(), saved.getId(), plan.getName(),
+                saved.getCurrency() + " " + saved.getAmount().toPlainString(), receipt);
         return saved;
     }
 

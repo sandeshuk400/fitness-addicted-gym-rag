@@ -1,5 +1,7 @@
 package com.fitnessaddicted.gym.notification;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,14 +34,18 @@ import com.fitnessaddicted.gym.membership.service.SubscriptionService;
 import com.fitnessaddicted.gym.notification.service.ExpiryReminderService;
 
 /**
- * End-to-end tests for in-app expiry reminders: creation, no duplicates, queued-plan suppression,
- * and who may read or mark notifications. Requires Docker.
+ * End-to-end tests for in-app notifications: expiry reminders, freeze-ended notices and payment receipts.
+ * Every sale also creates a receipt, so most tests look only at one notification type. Requires Docker.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
 @ActiveProfiles("test")
 class NotificationIntegrationTest {
+
+    private static final String EXPIRY = "SUBSCRIPTION_EXPIRY";
+    private static final String FREEZE_ENDED = "FREEZE_ENDED";
+    private static final String RECEIPT = "PAYMENT_RECEIPT";
 
     @Container
     @ServiceConnection
@@ -144,13 +150,31 @@ class NotificationIntegrationTest {
                 AppTime.today().plusDays(days), memberId);
     }
 
-    private JsonNode myNotifications(Member member) throws Exception {
+    /** The member's notifications of one type, newest first. */
+    private List<JsonNode> notificationsOfType(Member member, String type) throws Exception {
         MvcResult result = mockMvc.perform(get("/api/v1/notifications/mine")
                         .header("Authorization", member.token()))
                 .andExpect(status().isOk()).andReturn();
-        return read(result);
+        List<JsonNode> matching = new ArrayList<>();
+        for (JsonNode n : read(result)) {
+            if (n.get("type").asText().equals(type)) {
+                matching.add(n);
+            }
+        }
+        return matching;
     }
 
+    private long unreadOfType(Member member, String type) throws Exception {
+        long count = 0;
+        for (JsonNode n : notificationsOfType(member, type)) {
+            if (!n.get("read").asBoolean()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** The unread count from the API, across all types. */
     private long unreadCount(Member member) throws Exception {
         MvcResult result = mockMvc.perform(get("/api/v1/notifications/mine/unread-count")
                         .header("Authorization", member.token()))
@@ -158,7 +182,14 @@ class NotificationIntegrationTest {
         return read(result).get("unread").asLong();
     }
 
-    // ---------- tests ----------
+    private JsonNode myPayments(Member member) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/v1/members/me/payments")
+                        .header("Authorization", member.token()))
+                .andExpect(status().isOk()).andReturn();
+        return read(result);
+    }
+
+    // ---------- expiry reminders ----------
 
     @Test
     void reminderIsCreatedWhenThePlanEndsWithinAWeek() throws Exception {
@@ -169,14 +200,13 @@ class NotificationIntegrationTest {
 
         reminders.createReminders();
 
-        JsonNode list = myNotifications(member);
+        List<JsonNode> list = notificationsOfType(member, EXPIRY);
         assertEquals(1, list.size());
         JsonNode n = list.get(0);
-        assertEquals("SUBSCRIPTION_EXPIRY", n.get("type").asText());
         assertEquals(3, n.get("daysBefore").asInt());
         assertFalse(n.get("read").asBoolean());
         assertTrue(n.get("message").asText().contains("3 days"), n.get("message").asText());
-        assertEquals(1, unreadCount(member));
+        assertEquals(1, unreadOfType(member, EXPIRY));
     }
 
     @Test
@@ -190,7 +220,7 @@ class NotificationIntegrationTest {
         int secondRun = reminders.createReminders();
 
         assertEquals(0, secondRun);
-        assertEquals(1, myNotifications(member).size());
+        assertEquals(1, notificationsOfType(member, EXPIRY).size());
     }
 
     @Test
@@ -202,7 +232,7 @@ class NotificationIntegrationTest {
 
         reminders.createReminders();
 
-        assertEquals(0, myNotifications(member).size());
+        assertEquals(0, notificationsOfType(member, EXPIRY).size());
     }
 
     @Test
@@ -215,9 +245,11 @@ class NotificationIntegrationTest {
 
         reminders.createReminders();
 
-        assertEquals(0, myNotifications(member).size());
-        assertEquals(0, unreadCount(member));
+        assertEquals(0, notificationsOfType(member, EXPIRY).size());
+        assertEquals(0, unreadOfType(member, EXPIRY));
     }
+
+    // ---------- reading and marking ----------
 
     @Test
     void membersCanMarkTheirOwnNotificationReadButNotSomeoneElses() throws Exception {
@@ -227,14 +259,14 @@ class NotificationIntegrationTest {
         sell(staff, owner.id(), "Monthly");
         endRunningPlanIn(owner.id(), 1);
         reminders.createReminders();
-        long id = myNotifications(owner).get(0).get("id").asLong();
+        long id = notificationsOfType(owner, EXPIRY).get(0).get("id").asLong();
 
         // Another member gets "not found", and the notification stays unread.
         mockMvc.perform(post("/api/v1/notifications/" + id + "/read")
                         .header("Authorization", stranger.token()))
                 .andExpect(status().isNotFound());
-        assertEquals(1, unreadCount(owner));
-        assertEquals(0, myNotifications(stranger).size());
+        assertEquals(1, unreadOfType(owner, EXPIRY));
+        assertEquals(0, notificationsOfType(stranger, EXPIRY).size());
 
         // The owner can mark it read, and doing it twice is harmless.
         for (int i = 0; i < 2; i++) {
@@ -244,8 +276,12 @@ class NotificationIntegrationTest {
             assertTrue(read(marked).get("read").asBoolean());
             assertNotNull(read(marked).get("readAt"));
         }
-        assertEquals(0, unreadCount(owner));
+        assertEquals(0, unreadOfType(owner, EXPIRY));
+        // Only the sale's receipt is still unread.
+        assertEquals(1, unreadCount(owner));
     }
+
+    // ---------- freeze ended ----------
 
     @Test
     void memberIsToldWhenAFreezeEndsAndOnlyOnce() throws Exception {
@@ -266,16 +302,37 @@ class NotificationIntegrationTest {
 
         subscriptionService.refreshStatuses();
 
-        JsonNode list = myNotifications(member);
+        List<JsonNode> list = notificationsOfType(member, FREEZE_ENDED);
         assertEquals(1, list.size());
-        assertEquals("FREEZE_ENDED", list.get(0).get("type").asText());
         assertFalse(list.get(0).get("read").asBoolean());
         assertEquals("ACTIVE", jdbc.queryForObject(
                 "SELECT status FROM subscription WHERE id = ?", String.class, subscriptionId));
 
         // Running the refresh again must not add a second notice.
         subscriptionService.refreshStatuses();
-        assertEquals(1, myNotifications(member).size());
-        assertEquals(1, unreadCount(member));
+        assertEquals(1, notificationsOfType(member, FREEZE_ENDED).size());
+        assertEquals(1, unreadOfType(member, FREEZE_ENDED));
+    }
+
+    // ---------- payment receipts ----------
+
+    @Test
+    void everySaleSendsTheMemberOneReceiptNotice() throws Exception {
+        String staff = staffToken();
+        Member member = newMember();
+
+        sell(staff, member.id(), "Monthly");
+
+        List<JsonNode> receipts = notificationsOfType(member, RECEIPT);
+        assertEquals(1, receipts.size());
+        String receiptNumber = myPayments(member).get(0).get("receiptNumber").asText();
+        String message = receipts.get(0).get("message").asText();
+        assertTrue(message.contains(receiptNumber), message);
+        assertTrue(message.contains("Monthly"), message);
+        assertFalse(receipts.get(0).get("read").asBoolean());
+
+        // A second sale is a second payment, so a second receipt (not a duplicate of the first).
+        sell(staff, member.id(), "Quarterly");
+        assertEquals(2, notificationsOfType(member, RECEIPT).size());
     }
 }

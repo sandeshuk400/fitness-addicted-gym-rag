@@ -17,6 +17,7 @@ public class Notification {
     public static final String CHANNEL_IN_APP = "IN_APP";
     public static final String TYPE_SUBSCRIPTION_EXPIRY = "SUBSCRIPTION_EXPIRY";
     public static final String TYPE_FREEZE_ENDED = "FREEZE_ENDED";
+    public static final String TYPE_PAYMENT_RECEIPT = "PAYMENT_RECEIPT";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,6 +53,9 @@ public class Notification {
     @Column(name = "days_before")
     private Integer daysBefore;
 
+    @Column(name = "payment_id")
+    private Long paymentId;
+
     @Column(name = "read_at")
     private Instant readAt;
 
@@ -59,31 +63,35 @@ public class Notification {
         // for JPA
     }
 
-    public static Notification expiryReminder(Long userId, Long subscriptionId, int daysBefore,
-                                              String title, String message) {
+    private static Notification inApp(Long userId, String type, String title, String message) {
         Notification n = new Notification();
         n.userId = userId;
         n.channel = CHANNEL_IN_APP;
-        n.type = TYPE_SUBSCRIPTION_EXPIRY;
+        n.type = type;
         n.status = "SENT"; // in-app messages are delivered the moment the row exists
         n.sentAt = Instant.now();
         n.title = title;
         n.message = message;
+        return n;
+    }
+
+    public static Notification expiryReminder(Long userId, Long subscriptionId, int daysBefore,
+                                              String title, String message) {
+        Notification n = inApp(userId, TYPE_SUBSCRIPTION_EXPIRY, title, message);
         n.subscriptionId = subscriptionId;
         n.daysBefore = daysBefore;
         return n;
     }
 
     public static Notification freezeEnded(Long userId, Long subscriptionId, String title, String message) {
-        Notification n = new Notification();
-        n.userId = userId;
-        n.channel = CHANNEL_IN_APP;
-        n.type = TYPE_FREEZE_ENDED;
-        n.status = "SENT";
-        n.sentAt = Instant.now();
-        n.title = title;
-        n.message = message;
+        Notification n = inApp(userId, TYPE_FREEZE_ENDED, title, message);
         n.subscriptionId = subscriptionId;
+        return n;
+    }
+
+    public static Notification paymentReceipt(Long userId, Long paymentId, String title, String message) {
+        Notification n = inApp(userId, TYPE_PAYMENT_RECEIPT, title, message);
+        n.paymentId = paymentId;
         return n;
     }
 
@@ -101,5 +109,6 @@ public class Notification {
     public String getMessage() { return message; }
     public Long getSubscriptionId() { return subscriptionId; }
     public Integer getDaysBefore() { return daysBefore; }
+    public Long getPaymentId() { return paymentId; }
     public Instant getReadAt() { return readAt; }
 }
