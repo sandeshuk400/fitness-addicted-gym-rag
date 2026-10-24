@@ -16,6 +16,7 @@ public class Notification {
 
     public static final String CHANNEL_IN_APP = "IN_APP";
     public static final String TYPE_SUBSCRIPTION_EXPIRY = "SUBSCRIPTION_EXPIRY";
+    public static final String TYPE_FREEZE_ENDED = "FREEZE_ENDED";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -70,6 +71,19 @@ public class Notification {
         n.message = message;
         n.subscriptionId = subscriptionId;
         n.daysBefore = daysBefore;
+        return n;
+    }
+
+    public static Notification freezeEnded(Long userId, Long subscriptionId, String title, String message) {
+        Notification n = new Notification();
+        n.userId = userId;
+        n.channel = CHANNEL_IN_APP;
+        n.type = TYPE_FREEZE_ENDED;
+        n.status = "SENT";
+        n.sentAt = Instant.now();
+        n.title = title;
+        n.message = message;
+        n.subscriptionId = subscriptionId;
         return n;
     }
 

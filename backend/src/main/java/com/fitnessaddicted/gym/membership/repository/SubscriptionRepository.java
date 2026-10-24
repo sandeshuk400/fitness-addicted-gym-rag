@@ -24,6 +24,9 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     List<Subscription> findByStatusAndEndDateBetweenOrderByEndDateAsc(SubscriptionStatus status,
                                                                       LocalDate from, LocalDate to);
 
+    /** Frozen memberships whose freeze has run out (same date rule as endFreezes). */
+    List<Subscription> findByStatusAndFrozenUntilLessThanEqual(SubscriptionStatus status, LocalDate date);
+
     boolean existsByMemberIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
             Long memberId, SubscriptionStatus status, LocalDate startOnOrBefore, LocalDate endOnOrAfter);
 

@@ -22,6 +22,7 @@ import com.fitnessaddicted.gym.membership.domain.Subscription;
 import com.fitnessaddicted.gym.membership.domain.SubscriptionStatus;
 import com.fitnessaddicted.gym.membership.repository.MembershipPlanRepository;
 import com.fitnessaddicted.gym.membership.repository.SubscriptionRepository;
+import com.fitnessaddicted.gym.notification.service.FreezeNotificationService;
 import com.fitnessaddicted.gym.payment.domain.PaymentMethod;
 import com.fitnessaddicted.gym.payment.service.PaymentService;
 
@@ -45,11 +46,12 @@ public class SubscriptionService {
     private final AuditService audit;
     private final PaymentService payments;
     private final SubscriptionQueue queue;
+    private final FreezeNotificationService freezeNotices;
     private final int maxFreezeDays;
 
     public SubscriptionService(SubscriptionRepository subscriptions, MembershipPlanRepository plans,
                                MemberProfileService members, AuditService audit, PaymentService payments,
-                               SubscriptionQueue queue,
+                               SubscriptionQueue queue, FreezeNotificationService freezeNotices,
                                @Value("${app.membership.max-freeze-days:30}") int maxFreezeDays) {
         this.subscriptions = subscriptions;
         this.plans = plans;
@@ -57,6 +59,7 @@ public class SubscriptionService {
         this.audit = audit;
         this.payments = payments;
         this.queue = queue;
+        this.freezeNotices = freezeNotices;
         this.maxFreezeDays = maxFreezeDays;
     }
 
@@ -175,6 +178,7 @@ public class SubscriptionService {
     @Transactional
     public int refreshStatuses() {
         LocalDate today = AppTime.today();
+        freezeNotices.notifyFreezesEnding(today);
         int changed = subscriptions.endFreezes(SubscriptionStatus.FROZEN, SubscriptionStatus.ACTIVE, today);
         changed += subscriptions.startQueued(SubscriptionStatus.PENDING, SubscriptionStatus.ACTIVE, today);
         changed += subscriptions.expireEnded(SubscriptionStatus.ACTIVE, SubscriptionStatus.EXPIRED, today);

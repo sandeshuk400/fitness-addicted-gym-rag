@@ -28,6 +28,7 @@ import org.testcontainers.utility.DockerImageName;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fitnessaddicted.gym.common.AppTime;
+import com.fitnessaddicted.gym.membership.service.SubscriptionService;
 import com.fitnessaddicted.gym.notification.service.ExpiryReminderService;
 
 /**
@@ -58,6 +59,9 @@ class NotificationIntegrationTest {
 
     @Autowired
     ExpiryReminderService reminders;
+
+    @Autowired
+    SubscriptionService subscriptionService;
 
     // ---------- helpers ----------
 
@@ -241,5 +245,37 @@ class NotificationIntegrationTest {
             assertNotNull(read(marked).get("readAt"));
         }
         assertEquals(0, unreadCount(owner));
+    }
+
+    @Test
+    void memberIsToldWhenAFreezeEndsAndOnlyOnce() throws Exception {
+        String staff = staffToken();
+        Member member = newMember();
+        sell(staff, member.id(), "Monthly");
+        Long subscriptionId = jdbc.queryForObject(
+                "SELECT id FROM subscription WHERE member_id = ?", Long.class, member.id());
+
+        mockMvc.perform(post("/api/v1/subscriptions/" + subscriptionId + "/freeze")
+                        .header("Authorization", member.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("days", 5))))
+                .andExpect(status().isOk());
+        // Pretend the freeze ran out yesterday.
+        jdbc.update("UPDATE subscription SET frozen_until = ? WHERE id = ?",
+                AppTime.today().minusDays(1), subscriptionId);
+
+        subscriptionService.refreshStatuses();
+
+        JsonNode list = myNotifications(member);
+        assertEquals(1, list.size());
+        assertEquals("FREEZE_ENDED", list.get(0).get("type").asText());
+        assertFalse(list.get(0).get("read").asBoolean());
+        assertEquals("ACTIVE", jdbc.queryForObject(
+                "SELECT status FROM subscription WHERE id = ?", String.class, subscriptionId));
+
+        // Running the refresh again must not add a second notice.
+        subscriptionService.refreshStatuses();
+        assertEquals(1, myNotifications(member).size());
+        assertEquals(1, unreadCount(member));
     }
 }
