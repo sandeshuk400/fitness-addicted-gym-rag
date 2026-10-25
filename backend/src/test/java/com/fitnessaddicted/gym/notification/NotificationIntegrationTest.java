@@ -415,4 +415,19 @@ class NotificationIntegrationTest {
                 .andExpect(status().isOk()).andReturn();
         assertFalse(read(mine).get(0).has("reminderSent"));
     }
+
+        // ---------- email switched off ----------
+
+    @Test
+    void noEmailRowsAreQueuedWhileEmailIsOff() throws Exception {
+        String staff = staffToken();
+        Member member = newMember();
+
+        sell(staff, member.id(), "Monthly");
+
+        assertEquals(1, notificationsOfType(member, RECEIPT).size());
+        assertEquals(0, (int) jdbc.queryForObject(
+                "SELECT count(*) FROM notification WHERE user_id = ? AND channel = 'EMAIL'",
+                Integer.class, member.id()));
+    }
 }

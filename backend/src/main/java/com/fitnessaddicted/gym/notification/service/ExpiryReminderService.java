@@ -18,6 +18,7 @@ import com.fitnessaddicted.gym.notification.repository.NotificationRepository;
  * smallest mark that still covers its days left, so a server that was down on the exact day catches up
  * on the next run, and each mark is sent at most once per subscription. Members who already have a
  * queued plan behind the running one are not reminded, since they are not about to lose access.
+ * When email is on, each reminder also queues an email copy.
  */
 @Service
 public class ExpiryReminderService {
@@ -26,10 +27,13 @@ public class ExpiryReminderService {
 
     private final SubscriptionRepository subscriptions;
     private final NotificationRepository notifications;
+    private final EmailQueue emailQueue;
 
-    public ExpiryReminderService(SubscriptionRepository subscriptions, NotificationRepository notifications) {
+    public ExpiryReminderService(SubscriptionRepository subscriptions, NotificationRepository notifications,
+                                 EmailQueue emailQueue) {
         this.subscriptions = subscriptions;
         this.notifications = notifications;
+        this.emailQueue = emailQueue;
     }
 
     @Transactional
@@ -48,8 +52,9 @@ public class ExpiryReminderService {
                     s.getId(), mark, Notification.CHANNEL_IN_APP)) {
                 continue;
             }
-            notifications.save(Notification.expiryReminder(s.getMemberId(), s.getId(), mark,
-                    "Membership ending soon", messageFor(daysLeft, s.getEndDate())));
+            Notification notice = notifications.save(Notification.expiryReminder(s.getMemberId(), s.getId(),
+                    mark, "Membership ending soon", messageFor(daysLeft, s.getEndDate())));
+            emailQueue.queueCopy(notice);
             created++;
         }
         return created;

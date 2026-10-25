@@ -21,10 +21,13 @@ public class FreezeNotificationService {
 
     private final SubscriptionRepository subscriptions;
     private final NotificationRepository notifications;
+    private final EmailQueue emailQueue;
 
-    public FreezeNotificationService(SubscriptionRepository subscriptions, NotificationRepository notifications) {
+    public FreezeNotificationService(SubscriptionRepository subscriptions, NotificationRepository notifications,
+                                     EmailQueue emailQueue) {
         this.subscriptions = subscriptions;
         this.notifications = notifications;
+        this.emailQueue = emailQueue;
     }
 
     @Transactional
@@ -32,9 +35,11 @@ public class FreezeNotificationService {
         int created = 0;
         for (Subscription s : subscriptions.findByStatusAndFrozenUntilLessThanEqual(
                 SubscriptionStatus.FROZEN, today)) {
-            notifications.save(Notification.freezeEnded(s.getMemberId(), s.getId(), "Freeze ended",
+            Notification notice = notifications.save(Notification.freezeEnded(s.getMemberId(), s.getId(),
+                    "Freeze ended",
                     "Your membership freeze has ended and your membership is active again. "
                             + "It now runs until " + s.getEndDate() + "."));
+            emailQueue.queueCopy(notice);
             created++;
         }
         return created;

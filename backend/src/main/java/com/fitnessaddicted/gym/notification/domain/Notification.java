@@ -126,6 +126,15 @@ public class Notification {
         return n;
     }
 
+    /** A pending email carrying the same text and links as an in-app notice. */
+    public static Notification emailCopyOf(Notification source) {
+        Notification n = pendingEmail(source.userId, source.type, source.title, source.message);
+        n.subscriptionId = source.subscriptionId;
+        n.daysBefore = source.daysBefore;
+        n.paymentId = source.paymentId;
+        return n;
+    }
+
     public void markRead() {
         if (readAt == null) {
             readAt = Instant.now();
