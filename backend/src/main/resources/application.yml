@@ -2,6 +2,21 @@ spring:
   application:
     name: fitness-addicted-gym
 
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/gymdb}
     username: ${DB_USER:gym}
@@ -48,6 +63,9 @@ management:
     web:
       exposure:
         include: health,info
+  health:
+    mail:
+      enabled: false
   endpoint:
     health:
       probes:
@@ -67,6 +85,10 @@ app:
     password: ${BOOTSTRAP_ADMIN_PASSWORD:}
   membership:
     max-freeze-days: 30   # per subscription; freezing extends the end date by the same number of days
+  notifications:
+    email:
+      enabled: ${EMAIL_ENABLED:false}       # off unless explicitly turned on
+      from: ${MAIL_FROM:}                   # sender address, usually the same as MAIL_USERNAME
   rag:
     top-k: 5
     similarity-threshold: 0.55
