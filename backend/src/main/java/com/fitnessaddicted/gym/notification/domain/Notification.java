@@ -9,16 +9,25 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** A message for a user. For now only the IN_APP channel is produced; email can reuse the same rows later. */
+/**
+ * A message for a user. IN_APP rows are shown in the app at once; EMAIL rows wait as PENDING until the
+ * dispatch job sends them.
+ */
 @Entity
 @Table(name = "notification")
 public class Notification {
 
     public static final String CHANNEL_IN_APP = "IN_APP";
+    public static final String CHANNEL_EMAIL = "EMAIL";
+
     public static final String TYPE_SUBSCRIPTION_EXPIRY = "SUBSCRIPTION_EXPIRY";
     public static final String TYPE_FREEZE_ENDED = "FREEZE_ENDED";
     public static final String TYPE_PAYMENT_RECEIPT = "PAYMENT_RECEIPT";
     public static final String TYPE_PAYMENT_REFUND = "PAYMENT_REFUND";
+
+    public static final String STATUS_PENDING = "PENDING";
+    public static final String STATUS_SENT = "SENT";
+    public static final String STATUS_FAILED = "FAILED";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -60,6 +69,9 @@ public class Notification {
     @Column(name = "read_at")
     private Instant readAt;
 
+    @Column(nullable = false)
+    private int attempts;
+
     protected Notification() {
         // for JPA
     }
@@ -69,7 +81,7 @@ public class Notification {
         n.userId = userId;
         n.channel = CHANNEL_IN_APP;
         n.type = type;
-        n.status = "SENT"; // in-app messages are delivered the moment the row exists
+        n.status = STATUS_SENT; // in-app messages are delivered the moment the row exists
         n.sentAt = Instant.now();
         n.title = title;
         n.message = message;
@@ -102,15 +114,46 @@ public class Notification {
         return n;
     }
 
+    /** An email waiting to be sent by the dispatch job. */
+    public static Notification pendingEmail(Long userId, String type, String title, String message) {
+        Notification n = new Notification();
+        n.userId = userId;
+        n.channel = CHANNEL_EMAIL;
+        n.type = type;
+        n.status = STATUS_PENDING;
+        n.title = title;
+        n.message = message;
+        return n;
+    }
+
     public void markRead() {
         if (readAt == null) {
             readAt = Instant.now();
         }
     }
 
+    public void markSent() {
+        status = STATUS_SENT;
+        sentAt = Instant.now();
+    }
+
+    public void markFailed() {
+        status = STATUS_FAILED;
+    }
+
+    /** Counts a failed send. Once maxAttempts is reached the row is FAILED and is not tried again. */
+    public void recordFailedAttempt(int maxAttempts) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+            status = STATUS_FAILED;
+        }
+    }
+
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
+    public String getChannel() { return channel; }
     public String getType() { return type; }
+    public String getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
     public String getTitle() { return title; }
     public String getMessage() { return message; }
@@ -118,4 +161,5 @@ public class Notification {
     public Integer getDaysBefore() { return daysBefore; }
     public Long getPaymentId() { return paymentId; }
     public Instant getReadAt() { return readAt; }
+    public int getAttempts() { return attempts; }
 }

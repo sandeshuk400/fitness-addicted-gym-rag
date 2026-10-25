@@ -8,3 +8,6 @@ app:
   bootstrap-admin:
     email: admin@test.local
     password: Admin#12345
+  notifications:
+    email:
+      enabled: false   # tests never send real mail; they use a recording sender

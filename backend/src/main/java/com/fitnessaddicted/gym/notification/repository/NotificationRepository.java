@@ -32,4 +32,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             + "group by n.subscriptionId")
     List<Object[]> findLastReminderMarks(@Param("ids") Collection<Long> ids, @Param("type") String type,
                                          @Param("channel") String channel);
+
+    /** The oldest notifications of a channel in a given status, in batches of 50. */
+    List<Notification> findTop50ByChannelAndStatusOrderByIdAsc(String channel, String status);
 }
