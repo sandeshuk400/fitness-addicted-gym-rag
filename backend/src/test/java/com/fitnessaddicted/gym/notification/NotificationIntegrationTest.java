@@ -190,6 +190,23 @@ class NotificationIntegrationTest {
         return read(result);
     }
 
+        /** The staff expiring list, as a JSON array. */
+    private JsonNode expiringList(String staff) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/v1/subscriptions/expiring?days=7")
+                        .header("Authorization", staff))
+                .andExpect(status().isOk()).andReturn();
+        return read(result);
+    }
+
+    private JsonNode findById(JsonNode list, long id) {
+        for (JsonNode n : list) {
+            if (n.get("id").asLong() == id) {
+                return n;
+            }
+        }
+        throw new AssertionError("Subscription " + id + " not in the expiring list");
+    }
+
     // ---------- expiry reminders ----------
 
     @Test
@@ -368,5 +385,34 @@ class NotificationIntegrationTest {
                         .content(json(Map.of("reason", "Again"))))
                 .andExpect(status().is4xxClientError());
         assertEquals(1, notificationsOfType(member, REFUND).size());
+    }
+
+        // ---------- staff expiring list ----------
+
+    @Test
+    void expiDcJHrrHSgvFpsYxqb6g97uaQTd2kE31rPUeDZTeDsjVq() throws Exception {
+        String staff = staffToken();
+        Member member = newMember();
+        sell(staff, member.id(), "Monthly");
+        long subscriptionId = jdbc.queryForObject(
+                "SELECT id FROM subscription WHERE member_id = ?", Long.class, member.id());
+        endRunningPlanIn(member.id(), 3);
+
+        // Before the reminder job has run: listed, but not reminded yet.
+        JsonNode before = findById(expiringList(staff), subscriptionId);
+        assertFalse(before.get("reminderSent").asBoolean());
+        assertTrue(before.get("lastReminderDays") == null || before.get("lastReminderDays").isNull());
+
+        reminders.createReminders();
+
+        JsonNode after = findById(expiringList(staff), subscriptionId);
+        assertTrue(after.get("reminderSent").asBoolean());
+        assertEquals(3, after.get("lastReminderDays").asInt());
+
+        // Staff-only fields: the member's own subscription list does not carry them.
+        MvcResult mine = mockMvc.perform(get("/api/v1/members/me/subscriptions")
+                        .header("Authorization", member.token()))
+                .andExpect(status().isOk()).andReturn();
+        assertFalse(read(mine).get(0).has("reminderSent"));
     }
 }
