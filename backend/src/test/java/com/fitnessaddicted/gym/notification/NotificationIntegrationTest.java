@@ -46,6 +46,7 @@ class NotificationIntegrationTest {
     private static final String EXPIRY = "SUBSCRIPTION_EXPIRY";
     private static final String FREEZE_ENDED = "FREEZE_ENDED";
     private static final String RECEIPT = "PAYMENT_RECEIPT";
+    private static final String REFUND = "PAYMENT_REFUND";
 
     @Container
     @ServiceConnection
@@ -334,5 +335,38 @@ class NotificationIntegrationTest {
         // A second sale is a second payment, so a second receipt (not a duplicate of the first).
         sell(staff, member.id(), "Quarterly");
         assertEquals(2, notificationsOfType(member, RECEIPT).size());
+    }
+
+        // ---------- payment refunds ----------
+
+    @Test
+    void refundingAPaymentSendsTheMemberOneRefundNotice() throws Exception {
+        String staff = staffToken();
+        Member member = newMember();
+        sell(staff, member.id(), "Monthly");
+        JsonNode payment = myPayments(member).get(0);
+        long paymentId = payment.get("id").asLong();
+        String receiptNumber = payment.get("receiptNumber").asText();
+
+        mockMvc.perform(post("/api/v1/payments/" + paymentId + "/refund")
+                        .header("Authorization", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("reason", "Moved away"))))
+                .andExpect(status().isOk());
+
+        List<JsonNode> refunds = notificationsOfType(member, REFUND);
+        assertEquals(1, refunds.size());
+        String message = refunds.get(0).get("message").asText();
+        assertTrue(message.contains(receiptNumber), message);
+        assertFalse(message.contains("Moved away"), "the staff reason must not reach the member");
+        assertFalse(refunds.get(0).get("read").asBoolean());
+
+        // Refunding again is rejected and must not add a second notice.
+        mockMvc.perform(post("/api/v1/payments/" + paymentId + "/refund")
+                        .header("Authorization", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("reason", "Again"))))
+                .andExpect(status().is4xxClientError());
+        assertEquals(1, notificationsOfType(member, REFUND).size());
     }
 }

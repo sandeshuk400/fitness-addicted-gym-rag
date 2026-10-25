@@ -18,6 +18,7 @@ public class Notification {
     public static final String TYPE_SUBSCRIPTION_EXPIRY = "SUBSCRIPTION_EXPIRY";
     public static final String TYPE_FREEZE_ENDED = "FREEZE_ENDED";
     public static final String TYPE_PAYMENT_RECEIPT = "PAYMENT_RECEIPT";
+    public static final String TYPE_PAYMENT_REFUND = "PAYMENT_REFUND";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -91,6 +92,12 @@ public class Notification {
 
     public static Notification paymentReceipt(Long userId, Long paymentId, String title, String message) {
         Notification n = inApp(userId, TYPE_PAYMENT_RECEIPT, title, message);
+        n.paymentId = paymentId;
+        return n;
+    }
+
+    public static Notification paymentRefund(Long userId, Long paymentId, String title, String message) {
+        Notification n = inApp(userId, TYPE_PAYMENT_REFUND, title, message);
         n.paymentId = paymentId;
         return n;
     }

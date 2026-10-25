@@ -7,8 +7,9 @@ import com.fitnessaddicted.gym.notification.domain.Notification;
 import com.fitnessaddicted.gym.notification.repository.NotificationRepository;
 
 /**
- * Creates the in-app receipt notice for a sale. Takes plain values, not payment classes, so the
- * notification package does not depend on the payment package. Called inside the sale's transaction.
+ * Creates in-app payment notices (receipt on sale, notice on refund). Takes plain values, not payment
+ * classes, so the notification package does not depend on the payment package. Called inside the
+ * payment's transaction.
  */
 @Service
 public class PaymentNotificationService {
@@ -25,5 +26,11 @@ public class PaymentNotificationService {
         notifications.save(Notification.paymentReceipt(memberId, paymentId, "Payment received",
                 "We received " + amountText + " for your " + planName + " membership. "
                         + "Receipt number: " + receiptNumber + "."));
+    }
+
+    @Transactional
+    public void sendRefund(Long memberId, Long paymentId, String amountText, String receiptNumber) {
+        notifications.save(Notification.paymentRefund(memberId, paymentId, "Payment refunded",
+                "Your payment of " + amountText + " (receipt " + receiptNumber + ") has been refunded."));
     }
 }

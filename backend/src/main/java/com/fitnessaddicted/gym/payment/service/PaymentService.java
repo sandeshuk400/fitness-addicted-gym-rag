@@ -83,12 +83,15 @@ public class PaymentService {
             throw ApiException.conflict("Only a paid payment can be refunded");
         }
         p.markRefunded(Instant.now(), actorId, reason.trim());
-        subscriptions.findById(p.getSubscriptionId()).ifPresent(s -> {
-            if (s.getStatus() != SubscriptionStatus.CANCELLED && s.getStatus() != SubscriptionStatus.EXPIRED) {
-                s.cancel();
-                queue.compact(s.getMemberId());
+        Subscription sub = subscriptions.findById(p.getSubscriptionId()).orElse(null);
+        if (sub != null) {
+            if (sub.getStatus() != SubscriptionStatus.CANCELLED && sub.getStatus() != SubscriptionStatus.EXPIRED) {
+                sub.cancel();
+                queue.compact(sub.getMemberId());
             }
-        });
+            paymentNotices.sendRefund(sub.getMemberId(), p.getId(),
+                    p.getCurrency() + " " + p.getAmount().toPlainString(), p.getReceiptNumber());
+        }
         audit.record(actorId, "PAYMENT_REFUNDED", "Payment", String.valueOf(paymentId),
                 Map.of("receipt", String.valueOf(p.getReceiptNumber()), "reason", reason.trim()));
         return toResponses(List.of(p)).get(0);
