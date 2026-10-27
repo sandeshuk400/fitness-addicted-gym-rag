@@ -11,6 +11,7 @@ import Occupancy from './pages/staff/Occupancy'
 import Expiring from './pages/staff/Expiring'
 import CheckIn from './pages/staff/CheckIn'
 import Attendance from './pages/Attendance'
+import ProfilePage from './pages/Profile'
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { me, loading } = useAuth()
@@ -54,6 +55,7 @@ function Layout() {
             <NavLink to="/subscriptions" className={linkClass}>Subscriptions</NavLink>
             <NavLink to="/payments" className={linkClass}>Payments</NavLink>
             <NavLink to="/attendance" className={linkClass}>Visits</NavLink>
+            <NavLink to="/profile" className={linkClass}>Profile</NavLink>
           </>
         )}
         <span className="ml-auto text-sm text-neutral-400">
@@ -89,6 +91,7 @@ function App() {
             <Route path="/occupancy" element={<RequireRole staff><Occupancy /></RequireRole>} />
             <Route path="/checkin" element={<RequireRole staff><CheckIn /></RequireRole>} />
             <Route path="/attendance" element={<RequireRole staff={false}><Attendance /></RequireRole>} />
+            <Route path="/profile" element={<RequireRole staff={false}><ProfilePage /></RequireRole>} />
           </Route>
           <Route path="*" element={<Home />} />
         </Routes>
