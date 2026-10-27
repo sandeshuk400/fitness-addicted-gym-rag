@@ -14,6 +14,8 @@ import Attendance from './pages/Attendance'
 import ProfilePage from './pages/Profile'
 import ChangePassword from './pages/ChangePassword'
 import Register from './pages/Register'
+import Plans from './pages/admin/Plans'
+import Users from './pages/admin/Users'
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { me, loading } = useAuth()
@@ -25,6 +27,11 @@ function RequireRole({ staff, children }: { staff: boolean; children: ReactEleme
   const { me } = useAuth()
   const isStaff = me?.role === 'ADMIN' || me?.role === 'STAFF'
   return isStaff === staff ? children : <Navigate to="/" replace />
+}
+
+function RequireAdmin({ children }: { children: ReactElement }) {
+  const { me } = useAuth()
+  return me?.role === 'ADMIN' ? children : <Navigate to="/" replace />
 }
 
 function Home() {
@@ -41,6 +48,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 function Layout() {
   const { me, signOut } = useAuth()
   const isStaff = me?.role === 'ADMIN' || me?.role === 'STAFF'
+  const isAdmin = me?.role === 'ADMIN'
   return (
     <div className="min-h-screen bg-charcoal text-neutral-100">
       <nav className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-forest p-3">
@@ -50,6 +58,12 @@ function Layout() {
             <NavLink to="/members" className={linkClass}>Members</NavLink>
             <NavLink to="/expiring" className={linkClass}>Expiring</NavLink>
             <NavLink to="/occupancy" className={linkClass}>Occupancy</NavLink>
+            {isAdmin && (
+              <>
+                <NavLink to="/plans" className={linkClass}>Plans</NavLink>
+                <NavLink to="/users" className={linkClass}>Staff</NavLink>
+              </>
+            )}
           </>
         ) : (
           <>
@@ -96,6 +110,8 @@ function App() {
             <Route path="/members/:id" element={<RequireRole staff><MemberDetail /></RequireRole>} />
             <Route path="/expiring" element={<RequireRole staff><Expiring /></RequireRole>} />
             <Route path="/occupancy" element={<RequireRole staff><Occupancy /></RequireRole>} />
+            <Route path="/plans" element={<RequireAdmin><Plans /></RequireAdmin>} />
+            <Route path="/users" element={<RequireAdmin><Users /></RequireAdmin>} />
             <Route path="/change-password" element={<ChangePassword />} />
           </Route>
           <Route path="*" element={<Home />} />
