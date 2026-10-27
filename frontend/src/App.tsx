@@ -18,12 +18,20 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   }`
 
 function Layout() {
+  const { me, signOut } = useAuth()
   return (
-    <div>
-      <nav className="flex gap-2 border-b border-neutral-800 p-3">
+    <div className="min-h-screen bg-charcoal text-neutral-100">
+      <nav className="flex items-center gap-2 border-b border-white/10 bg-forest p-3">
         <NavLink to="/notifications" className={linkClass}>Notifications</NavLink>
         <NavLink to="/subscriptions" className={linkClass}>Subscriptions</NavLink>
         <NavLink to="/payments" className={linkClass}>Payments</NavLink>
+        <span className="ml-auto text-sm text-neutral-400">{me?.email}</span>
+        <button
+          onClick={() => void signOut()}
+          className="rounded px-3 py-1.5 text-sm text-neutral-300 hover:text-white"
+        >
+          Sign out
+        </button>
       </nav>
       <main className="p-4">
         <Outlet />
