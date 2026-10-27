@@ -90,12 +90,20 @@ public class SecurityConfig {
         return converter;
     }
 
+    /**
+     * Comma-separated origin patterns. The default allows any local dev port (Vite may pick 5173, 5174, ...).
+     * In production set app.cors.allowed-origins (or the APP_CORS_ALLOWED_ORIGINS env var) to the real site,
+     * for example https://gym.example.com
+     */
     @Bean
     CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins:http://localhost:5173}") String allowedOrigins) {
+            @Value("${app.cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}") String allowedOrigins) {
         CorsConfiguration config = new CorsConfiguration();
-        List<String> origins = Arrays.stream(allowedOrigins.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
-        config.setAllowedOrigins(origins);
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setMaxAge(3600L);
@@ -104,3 +112,4 @@ public class SecurityConfig {
         return source;
     }
 }
+
