@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
 export default function Login() {
@@ -9,7 +9,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  if (me) return <Navigate to="/notifications" replace />
+  if (me) return <Navigate to="/" replace />
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -46,6 +46,11 @@ export default function Login() {
           className="w-full rounded-lg bg-crimson px-6 py-2 font-semibold text-white transition hover:bg-crimson-dark disabled:opacity-60">
           {busy ? 'Signing in...' : 'Sign in'}
         </button>
+
+        <p className="mt-4 text-center text-sm text-neutral-400">
+          New here?{' '}
+          <Link to="/register" className="text-white hover:text-crimson">Create an account</Link>
+        </p>
       </form>
     </div>
   )

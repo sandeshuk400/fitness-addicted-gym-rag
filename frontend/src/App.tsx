@@ -12,6 +12,8 @@ import Expiring from './pages/staff/Expiring'
 import CheckIn from './pages/staff/CheckIn'
 import Attendance from './pages/Attendance'
 import ProfilePage from './pages/Profile'
+import ChangePassword from './pages/ChangePassword'
+import Register from './pages/Register'
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { me, loading } = useAuth()
@@ -41,7 +43,7 @@ function Layout() {
   const isStaff = me?.role === 'ADMIN' || me?.role === 'STAFF'
   return (
     <div className="min-h-screen bg-charcoal text-neutral-100">
-      <nav className="flex items-center gap-2 border-b border-white/10 bg-forest p-3">
+      <nav className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-forest p-3">
         {isStaff ? (
           <>
             <NavLink to="/checkin" className={linkClass}>Check-in</NavLink>
@@ -58,6 +60,7 @@ function Layout() {
             <NavLink to="/profile" className={linkClass}>Profile</NavLink>
           </>
         )}
+        <NavLink to="/change-password" className={linkClass}>Password</NavLink>
         <span className="ml-auto text-sm text-neutral-400">
           {me?.email} ({me?.role.toLowerCase()})
         </span>
@@ -81,17 +84,19 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route element={<RequireAuth><Layout /></RequireAuth>}>
             <Route path="/notifications" element={<RequireRole staff={false}><Notifications /></RequireRole>} />
             <Route path="/subscriptions" element={<RequireRole staff={false}><Subscriptions /></RequireRole>} />
             <Route path="/payments" element={<RequireRole staff={false}><Payments /></RequireRole>} />
+            <Route path="/attendance" element={<RequireRole staff={false}><Attendance /></RequireRole>} />
+            <Route path="/profile" element={<RequireRole staff={false}><ProfilePage /></RequireRole>} />
+            <Route path="/checkin" element={<RequireRole staff><CheckIn /></RequireRole>} />
             <Route path="/members" element={<RequireRole staff><Members /></RequireRole>} />
             <Route path="/members/:id" element={<RequireRole staff><MemberDetail /></RequireRole>} />
             <Route path="/expiring" element={<RequireRole staff><Expiring /></RequireRole>} />
             <Route path="/occupancy" element={<RequireRole staff><Occupancy /></RequireRole>} />
-            <Route path="/checkin" element={<RequireRole staff><CheckIn /></RequireRole>} />
-            <Route path="/attendance" element={<RequireRole staff={false}><Attendance /></RequireRole>} />
-            <Route path="/profile" element={<RequireRole staff={false}><ProfilePage /></RequireRole>} />
+            <Route path="/change-password" element={<ChangePassword />} />
           </Route>
           <Route path="*" element={<Home />} />
         </Routes>
