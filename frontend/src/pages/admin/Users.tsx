@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { api, ApiError } from '../../api/client'
 
 // GUESS: only ACTIVE is confirmed. Edit to match the UserStatus enum.
-const STATUSES = ['ACTIVE', 'SUSPENDED', 'DISABLED']
+const STATUSES = ['ACTIVE', 'SUSPENDED']
 const ROLES = ['STAFF', 'ADMIN']
 
 const input =
