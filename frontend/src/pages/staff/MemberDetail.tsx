@@ -28,13 +28,28 @@ type Payment = {
   method: string
   receiptNumber: string | null
   paidAt: string | null
+  refundReason: string | null
 }
+type Plan = { id: number; name: string; durationDays: number; price: number; active: boolean }
+
+// GUESS: only CASH is confirmed. Edit this list to match the PaymentMethod enum.
+const METHODS = ['CASH', 'UPI', 'CARD']
+
+const btn =
+  'rounded-lg bg-crimson px-4 py-1.5 text-sm font-semibold text-white hover:bg-crimson-dark disabled:opacity-60'
+const btnGhost =
+  'rounded-lg border border-white/20 px-4 py-1.5 text-sm text-neutral-200 hover:border-crimson disabled:opacity-60'
+const input =
+  'rounded-lg border border-white/20 bg-charcoal px-2 py-1 text-white focus:border-crimson focus:outline-none'
 
 export default function MemberDetail() {
   const { id } = useParams()
   const queryClient = useQueryClient()
   const [days, setDays] = useState(7)
   const [error, setError] = useState('')
+  const [planId, setPlanId] = useState<number | ''>('')
+  const [method, setMethod] = useState('CASH')
+  const [reference, setReference] = useState('')
 
   const member = useQuery({ queryKey: ['member', id], queryFn: () => api<Member>(`/members/${id}`) })
   const subs = useQuery({
@@ -45,28 +60,60 @@ export default function MemberDetail() {
     queryKey: ['member-pays', id],
     queryFn: () => api<Payment[]>(`/members/${id}/payments`),
   })
+  const plans = useQuery({ queryKey: ['plans'], queryFn: () => api<Plan[]>('/membership-plans') })
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['member-subs', id] })
     queryClient.invalidateQueries({ queryKey: ['member-pays', id] })
+    queryClient.invalidateQueries({ queryKey: ['expiring'] })
   }
   const onError = (e: unknown) => setError(e instanceof ApiError && e.message ? e.message : 'Action failed.')
+  const onSuccess = () => { setError(''); refresh() }
 
   const freeze = useMutation({
     mutationFn: (v: { subId: number; days: number }) =>
       api(`/subscriptions/${v.subId}/freeze`, { method: 'POST', body: JSON.stringify({ days: v.days }) }),
-    onSuccess: () => { setError(''); refresh() },
-    onError,
+    onSuccess, onError,
   })
   const unfreeze = useMutation({
     mutationFn: (subId: number) => api(`/subscriptions/${subId}/unfreeze`, { method: 'POST' }),
-    onSuccess: () => { setError(''); refresh() },
+    onSuccess, onError,
+  })
+  const cancel = useMutation({
+    mutationFn: (subId: number) => api(`/subscriptions/${subId}/cancel`, { method: 'POST' }),
+    onSuccess, onError,
+  })
+  const refund = useMutation({
+    mutationFn: (v: { payId: number; reason: string }) =>
+      api(`/payments/${v.payId}/refund`, { method: 'POST', body: JSON.stringify({ reason: v.reason }) }),
+    onSuccess, onError,
+  })
+  const sell = useMutation({
+    mutationFn: () =>
+      api(`/members/${id}/subscriptions`, {
+        method: 'POST',
+        body: JSON.stringify({
+          planId,
+          method,
+          ...(reference.trim() ? { reference: reference.trim() } : {}),
+        }),
+      }),
+    onSuccess: () => { setReference(''); setPlanId(''); onSuccess() },
     onError,
   })
-  const busy = freeze.isPending || unfreeze.isPending
 
-  const money = (p: Payment) =>
-    new Intl.NumberFormat('en-IN', { style: 'currency', currency: p.currency }).format(p.amount)
+  const busy = freeze.isPending || unfreeze.isPending || cancel.isPending || refund.isPending || sell.isPending
+
+  const money = (amount: number, currency: string) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(amount)
+
+  const askCancel = (s: Subscription) => {
+    if (window.confirm(`Cancel the ${s.planName} membership? This cannot be undone.`)) cancel.mutate(s.id)
+  }
+  const askRefund = (p: Payment) => {
+    const reason = window.prompt(`Refund ${money(p.amount, p.currency)}? Enter a reason:`)
+    if (reason && reason.trim()) refund.mutate({ payId: p.id, reason: reason.trim() })
+  }
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -85,6 +132,43 @@ export default function MemberDetail() {
       {error && (
         <p className="mb-4 rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>
       )}
+
+      <h2 className="mb-2 font-semibold">Sell a membership</h2>
+      <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-white/10 bg-forest p-4 text-sm text-neutral-300">
+        <label className="flex flex-col gap-1">
+          Plan
+          <select
+            value={planId}
+            onChange={(e) => setPlanId(e.target.value ? Number(e.target.value) : '')}
+            className={input}
+          >
+            <option value="">Choose a plan</option>
+            {plans.data?.filter((p) => p.active).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} · {money(p.price, 'INR')} · {p.durationDays} days
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          Method
+          <select value={method} onChange={(e) => setMethod(e.target.value)} className={input}>
+            {METHODS.map((m) => <option key={m}>{m}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          Reference (optional)
+          <input
+            value={reference}
+            maxLength={100}
+            onChange={(e) => setReference(e.target.value)}
+            className={`${input} w-40`}
+          />
+        </label>
+        <button disabled={busy || planId === ''} onClick={() => sell.mutate()} className={btn}>
+          Sell
+        </button>
+      </div>
 
       <h2 className="mb-2 font-semibold">Subscriptions</h2>
       {subs.isLoading && <p className="text-neutral-400">Loading...</p>}
@@ -106,34 +190,35 @@ export default function MemberDetail() {
               </span>
             </div>
 
-            {s.status === 'ACTIVE' && (
-              <div className="mt-3 flex items-center gap-3 border-t border-white/10 pt-3 text-sm text-neutral-300">
-                Freeze for
-                <input
-                  type="number"
-                  min={1}
-                  value={days}
-                  onChange={(e) => setDays(Number(e.target.value))}
-                  className="w-20 rounded-lg border border-white/20 bg-charcoal px-2 py-1 text-white focus:border-crimson focus:outline-none"
-                />
-                days
-                <button
-                  disabled={busy || days < 1}
-                  onClick={() => freeze.mutate({ subId: s.id, days })}
-                  className="rounded-lg bg-crimson px-4 py-1.5 font-semibold text-white hover:bg-crimson-dark disabled:opacity-60"
-                >
-                  Freeze
-                </button>
-              </div>
-            )}
-            {s.status === 'FROZEN' && (
-              <div className="mt-3 border-t border-white/10 pt-3">
-                <button
-                  disabled={busy}
-                  onClick={() => unfreeze.mutate(s.id)}
-                  className="rounded-lg bg-crimson px-4 py-1.5 text-sm font-semibold text-white hover:bg-crimson-dark disabled:opacity-60"
-                >
-                  Unfreeze
+            {(s.status === 'ACTIVE' || s.status === 'FROZEN') && (
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-white/10 pt-3 text-sm text-neutral-300">
+                {s.status === 'ACTIVE' && (
+                  <>
+                    Freeze for
+                    <input
+                      type="number"
+                      min={1}
+                      value={days}
+                      onChange={(e) => setDays(Number(e.target.value))}
+                      className={`${input} w-20`}
+                    />
+                    days
+                    <button
+                      disabled={busy || days < 1}
+                      onClick={() => freeze.mutate({ subId: s.id, days })}
+                      className={btn}
+                    >
+                      Freeze
+                    </button>
+                  </>
+                )}
+                {s.status === 'FROZEN' && (
+                  <button disabled={busy} onClick={() => unfreeze.mutate(s.id)} className={btn}>
+                    Unfreeze
+                  </button>
+                )}
+                <button disabled={busy} onClick={() => askCancel(s)} className={`${btnGhost} ml-auto`}>
+                  Cancel membership
                 </button>
               </div>
             )}
@@ -154,6 +239,7 @@ export default function MemberDetail() {
                 <th className="px-4 py-3 font-medium">Amount</th>
                 <th className="px-4 py-3 font-medium">Method</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -163,9 +249,19 @@ export default function MemberDetail() {
                   <td className="px-4 py-3 text-neutral-300">
                     {p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '—'}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-white">{money(p)}</td>
+                  <td className="px-4 py-3 font-semibold text-white">{money(p.amount, p.currency)}</td>
                   <td className="px-4 py-3 text-neutral-300">{p.method}</td>
-                  <td className="px-4 py-3 text-neutral-300">{p.status}</td>
+                  <td className="px-4 py-3 text-neutral-300">
+                    {p.status}
+                    {p.refundReason && <p className="text-xs text-neutral-500">{p.refundReason}</p>}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {p.status === 'PAID' && (
+                      <button disabled={busy} onClick={() => askRefund(p)} className={btnGhost}>
+                        Refund
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
