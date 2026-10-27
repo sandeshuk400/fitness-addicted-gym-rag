@@ -9,6 +9,7 @@ import Members from './pages/staff/Members'
 import MemberDetail from './pages/staff/MemberDetail'
 import Occupancy from './pages/staff/Occupancy'
 import Expiring from './pages/staff/Expiring'
+import CheckIn from './pages/staff/CheckIn'
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { me, loading } = useAuth()
@@ -41,6 +42,7 @@ function Layout() {
       <nav className="flex items-center gap-2 border-b border-white/10 bg-forest p-3">
         {isStaff ? (
           <>
+            <NavLink to="/checkin" className={linkClass}>Check-in</NavLink>
             <NavLink to="/members" className={linkClass}>Members</NavLink>
             <NavLink to="/expiring" className={linkClass}>Expiring</NavLink>
             <NavLink to="/occupancy" className={linkClass}>Occupancy</NavLink>
@@ -83,6 +85,7 @@ function App() {
             <Route path="/members/:id" element={<RequireRole staff><MemberDetail /></RequireRole>} />
             <Route path="/expiring" element={<RequireRole staff><Expiring /></RequireRole>} />
             <Route path="/occupancy" element={<RequireRole staff><Occupancy /></RequireRole>} />
+            <Route path="/checkin" element={<RequireRole staff><CheckIn /></RequireRole>} />
           </Route>
           <Route path="*" element={<Home />} />
         </Routes>
