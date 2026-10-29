@@ -33,15 +33,14 @@ public class UserAdminController {
         this.userAdminService = userAdminService;
     }
 
-    @PostMapping
-
     @GetMapping
     public PageResponse<UserResponse> list(@RequestParam(defaultValue = "0") int page,
                                            @RequestParam(defaultValue = "20") int size) {
         int safeSize = Math.min(Math.max(size, 1), 100);
         return userAdminService.list(PageRequest.of(Math.max(page, 0), safeSize, Sort.by("id")));
     }
-    
+
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateUserRequest request) {
         return userAdminService.createUser(CurrentUser.id(jwt), request);
