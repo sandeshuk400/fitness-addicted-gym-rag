@@ -13,6 +13,8 @@ import com.fitnessaddicted.gym.common.AuditService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.fitnessaddicted.gym.common.PageResponse;
+import org.springframework.data.domain.Pageable;
 
 /** Account management by admins: create staff/admin accounts, suspend and reactivate users. */
 @Service
@@ -59,5 +61,10 @@ public class UserAdminService {
         audit.record(actorId, "USER_STATUS_CHANGED", "AppUser", String.valueOf(targetId),
                 Map.of("status", status.name()));
         return UserResponse.from(user);
+    }
+
+        @Transactional(readOnly = true)
+    public PageResponse<UserResponse> list(Pageable pageable) {
+        return PageResponse.from(users.findAll(pageable).map(UserResponse::from));
     }
 }
