@@ -64,6 +64,9 @@ public class Payment {
     @Column(name = "refund_reason", length = 500)
     private String refundReason;
 
+    @Column(nullable = false, length = 20)
+    private String kind = "PLAN";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -104,4 +107,6 @@ public class Payment {
     public Instant getPaidAt() { return paidAt; }
     public Instant getRefundedAt() { return refundedAt; }
     public String getRefundReason() { return refundReason; }
+    public void markJoiningFee() { this.kind = "JOINING_FEE"; }
+    public String getKind() { return kind; }
 }

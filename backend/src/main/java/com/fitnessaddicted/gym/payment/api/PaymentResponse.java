@@ -9,11 +9,11 @@ import com.fitnessaddicted.gym.payment.domain.PaymentStatus;
 
 public record PaymentResponse(Long id, Long subscriptionId, Long memberId, BigDecimal amount, String currency,
                               PaymentStatus status, PaymentMethod method, String reference, String receiptNumber,
-                              Instant paidAt, Instant refundedAt, String refundReason) {
+                              Instant paidAt, Instant refundedAt, String refundReason, String kind) {
 
     public static PaymentResponse from(Payment p, Long memberId) {
         return new PaymentResponse(p.getId(), p.getSubscriptionId(), memberId, p.getAmount(), p.getCurrency(),
                 p.getStatus(), p.getMethod(), p.getReference(), p.getReceiptNumber(), p.getPaidAt(),
-                p.getRefundedAt(), p.getRefundReason());
+                p.getRefundedAt(), p.getRefundReason(), p.getKind());
     }
 }

@@ -2,6 +2,12 @@ package com.fitnessaddicted.gym.attendance.service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalTime;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.fitnessaddicted.gym.attendance.api.AttendanceResponse;
 import com.fitnessaddicted.gym.attendance.api.OccupancyResponse;
@@ -9,13 +15,10 @@ import com.fitnessaddicted.gym.attendance.domain.Attendance;
 import com.fitnessaddicted.gym.attendance.domain.AttendanceSource;
 import com.fitnessaddicted.gym.attendance.repository.AttendanceRepository;
 import com.fitnessaddicted.gym.common.ApiException;
+import com.fitnessaddicted.gym.common.AppTime;
 import com.fitnessaddicted.gym.common.PageResponse;
 import com.fitnessaddicted.gym.member.service.MemberProfileService;
 import com.fitnessaddicted.gym.membership.service.SubscriptionService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Check-in and check-out. A member can only enter with an ACTIVE membership covering today
@@ -30,7 +33,8 @@ public class AttendanceService {
 
     static final Duration OPEN_VISIT_MAX_AGE = Duration.ofHours(12);
     private static final int MAX_PAGE_SIZE = 100;
-
+    private static final LocalTime OPENS = LocalTime.of(5, 0);
+    private static final LocalTime CLOSES = LocalTime.of(23, 10);
     private final AttendanceRepository attendance;
     private final MemberProfileService members;
     private final SubscriptionService subscriptions;
@@ -44,6 +48,10 @@ public class AttendanceService {
 
     @Transactional
     public AttendanceResponse checkIn(Long memberId) {
+    LocalTime now = LocalTime.now(AppTime.GYM_ZONE);
+        if (now.isBefore(OPENS) || !now.isBefore(CLOSES)) {
+            throw ApiException.badRequest("The gym is open from 5:00 am to 11:00 pm");
+        }
         if (!members.exists(memberId)) {
             throw ApiException.notFound("Member not found");
         }

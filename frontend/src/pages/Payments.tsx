@@ -12,6 +12,7 @@ type Payment = {
   paidAt: string | null;
   refundedAt: string | null;
   refundReason: string | null;
+  kind: string;
 };
 
 function statusClass(status: string) {
@@ -60,6 +61,9 @@ export default function Payments() {
                 <tr key={p.id} className="border-b border-white/5 last:border-0">
                   <td className="px-4 py-3 font-mono text-xs text-neutral-200">
                     {p.receiptNumber ?? "—"}
+                    {p.kind === "JOINING_FEE" && (
+                      <p className="font-sans text-xs text-amber-300">Joining fee</p>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-neutral-300">
                     {p.paidAt ? new Date(p.paidAt).toLocaleDateString() : "—"}

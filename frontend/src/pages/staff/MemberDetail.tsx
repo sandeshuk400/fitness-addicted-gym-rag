@@ -29,11 +29,15 @@ type Payment = {
   receiptNumber: string | null
   paidAt: string | null
   refundReason: string | null
+  kind: string
 }
 type Plan = { id: number; name: string; durationDays: number; price: number; active: boolean }
 
 // GUESS: only CASH is confirmed. Edit this list to match the PaymentMethod enum.
 const METHODS = ['CASH', 'UPI', 'CARD']
+
+// Display only. The server decides the real fee; keep this equal to app.membership.joining-fee.
+const JOINING_FEE = 500
 
 const btn =
   'rounded-lg bg-crimson px-4 py-1.5 text-sm font-semibold text-white hover:bg-crimson-dark disabled:opacity-60'
@@ -41,12 +45,14 @@ const btnGhost =
   'rounded-lg border border-white/20 px-4 py-1.5 text-sm text-neutral-200 hover:border-crimson disabled:opacity-60'
 const input =
   'rounded-lg border border-white/20 bg-charcoal px-2 py-1 text-white focus:border-crimson focus:outline-none'
+const errorBox = 'mb-4 rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-300'
 
 export default function MemberDetail() {
   const { id } = useParams()
   const queryClient = useQueryClient()
   const [days, setDays] = useState(7)
   const [error, setError] = useState('')
+  const [refundError, setRefundError] = useState('')
   const [planId, setPlanId] = useState<number | ''>('')
   const [method, setMethod] = useState('CASH')
   const [reference, setReference] = useState('')
@@ -67,8 +73,9 @@ export default function MemberDetail() {
     queryClient.invalidateQueries({ queryKey: ['member-pays', id] })
     queryClient.invalidateQueries({ queryKey: ['expiring'] })
   }
-  const onError = (e: unknown) => setError(e instanceof ApiError && e.message ? e.message : 'Action failed.')
-  const onSuccess = () => { setError(''); refresh() }
+  const messageOf = (e: unknown) => (e instanceof ApiError && e.message ? e.message : 'Action failed.')
+  const onError = (e: unknown) => setError(messageOf(e))
+  const onSuccess = () => { setError(''); setRefundError(''); refresh() }
 
   const freeze = useMutation({
     mutationFn: (v: { subId: number; days: number }) =>
@@ -83,10 +90,12 @@ export default function MemberDetail() {
     mutationFn: (subId: number) => api(`/subscriptions/${subId}/cancel`, { method: 'POST' }),
     onSuccess, onError,
   })
+  // Refund errors are shown next to the Payments table, where the person is looking.
   const refund = useMutation({
     mutationFn: (v: { payId: number; reason: string }) =>
       api(`/payments/${v.payId}/refund`, { method: 'POST', body: JSON.stringify({ reason: v.reason }) }),
-    onSuccess, onError,
+    onSuccess,
+    onError: (e: unknown) => setRefundError(messageOf(e)),
   })
   const sell = useMutation({
     mutationFn: () =>
@@ -106,6 +115,10 @@ export default function MemberDetail() {
 
   const money = (amount: number, currency: string) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(amount)
+
+  // The joining fee is charged once per member, with their first sale.
+  const feeAlreadyPaid = !!pays.data?.some((p) => p.kind === 'JOINING_FEE')
+  const selectedPlan = plans.data?.find((p) => p.id === planId)
 
   const askCancel = (s: Subscription) => {
     if (window.confirm(`Cancel the ${s.planName} membership? This cannot be undone.`)) cancel.mutate(s.id)
@@ -129,45 +142,63 @@ export default function MemberDetail() {
         </div>
       )}
 
-      {error && (
-        <p className="mb-4 rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>
-      )}
+      {error && <p className={errorBox}>{error}</p>}
 
       <h2 className="mb-2 font-semibold">Sell a membership</h2>
-      <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-white/10 bg-forest p-4 text-sm text-neutral-300">
-        <label className="flex flex-col gap-1">
-          Plan
-          <select
-            value={planId}
-            onChange={(e) => setPlanId(e.target.value ? Number(e.target.value) : '')}
-            className={input}
-          >
-            <option value="">Choose a plan</option>
-            {plans.data?.filter((p) => p.active).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} · {money(p.price, 'INR')} · {p.durationDays} days
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1">
-          Method
-          <select value={method} onChange={(e) => setMethod(e.target.value)} className={input}>
-            {METHODS.map((m) => <option key={m}>{m}</option>)}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1">
-          Reference (optional)
-          <input
-            value={reference}
-            maxLength={100}
-            onChange={(e) => setReference(e.target.value)}
-            className={`${input} w-40`}
-          />
-        </label>
-        <button disabled={busy || planId === ''} onClick={() => sell.mutate()} className={btn}>
-          Sell
-        </button>
+      <div className="mb-6 rounded-xl border border-white/10 bg-forest p-4 text-sm text-neutral-300">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1">
+            Plan
+            <select
+              value={planId}
+              onChange={(e) => setPlanId(e.target.value ? Number(e.target.value) : '')}
+              className={input}
+            >
+              <option value="">Choose a plan</option>
+              {plans.data?.filter((p) => p.active).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} · {money(p.price, 'INR')} · {p.durationDays} days
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            Method
+            <select value={method} onChange={(e) => setMethod(e.target.value)} className={input}>
+              {METHODS.map((m) => <option key={m}>{m}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            Reference (optional)
+            <input
+              value={reference}
+              maxLength={100}
+              onChange={(e) => setReference(e.target.value)}
+              className={`${input} w-40`}
+            />
+          </label>
+          <button disabled={busy || planId === ''} onClick={() => sell.mutate()} className={btn}>
+            Sell
+          </button>
+        </div>
+
+        {pays.data && (
+          <p className="mt-3 text-xs text-neutral-400">
+            {feeAlreadyPaid ? (
+              'Joining fee already paid. Only the plan price is charged.'
+            ) : selectedPlan ? (
+              <>
+                A one-time, non-refundable joining fee of {money(JOINING_FEE, 'INR')} is added, as a
+                separate payment. Total to collect:{' '}
+                <span className="font-semibold text-white">
+                  {money(JOINING_FEE + selectedPlan.price, 'INR')}
+                </span>
+              </>
+            ) : (
+              `A one-time, non-refundable joining fee of ${money(JOINING_FEE, 'INR')} is added to this member's first sale.`
+            )}
+          </p>
+        )}
       </div>
 
       <h2 className="mb-2 font-semibold">Subscriptions</h2>
@@ -227,6 +258,7 @@ export default function MemberDetail() {
       </div>
 
       <h2 className="mb-2 font-semibold">Payments</h2>
+      {refundError && <p className={errorBox}>{refundError}</p>}
       {pays.isLoading && <p className="text-neutral-400">Loading...</p>}
       {pays.data?.length === 0 && <p className="text-neutral-400">No payments yet.</p>}
       {!!pays.data?.length && (
@@ -245,7 +277,12 @@ export default function MemberDetail() {
             <tbody>
               {pays.data.map((p) => (
                 <tr key={p.id} className="border-b border-white/5 last:border-0">
-                  <td className="px-4 py-3 font-mono text-xs">{p.receiptNumber ?? '—'}</td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {p.receiptNumber ?? '—'}
+                    {p.kind === 'JOINING_FEE' && (
+                      <p className="font-sans text-xs text-amber-300">Joining fee</p>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-neutral-300">
                     {p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '—'}
                   </td>
@@ -256,7 +293,10 @@ export default function MemberDetail() {
                     {p.refundReason && <p className="text-xs text-neutral-500">{p.refundReason}</p>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {p.status === 'PAID' && (
+                    {p.status === 'PAID' && p.kind === 'JOINING_FEE' && (
+                      <span className="text-xs text-neutral-500">Non-refundable</span>
+                    )}
+                    {p.status === 'PAID' && p.kind !== 'JOINING_FEE' && (
                       <button disabled={busy} onClick={() => askRefund(p)} className={btnGhost}>
                         Refund
                       </button>
