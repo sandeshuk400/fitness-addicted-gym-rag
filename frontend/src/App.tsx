@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import Notifications from './pages/Notifications'
 import Subscriptions from './pages/Subscriptions'
 import Payments from './pages/Payments'
+import Dashboard from './pages/staff/Dashboard'
 import Members from './pages/staff/Members'
 import MemberDetail from './pages/staff/MemberDetail'
 import Occupancy from './pages/staff/Occupancy'
@@ -38,7 +39,7 @@ function RequireAdmin({ children }: { children: ReactElement }) {
 function Home() {
   const { me } = useAuth()
   const isStaff = me?.role === 'ADMIN' || me?.role === 'STAFF'
-  return <Navigate to={isStaff ? '/members' : '/notifications'} replace />
+  return <Navigate to={isStaff ? '/dashboard' : '/notifications'} replace />
 }
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -54,38 +55,41 @@ function Layout() {
   const isAdmin = me?.role === 'ADMIN'
   return (
     <div className="relative z-10 min-h-screen text-neutral-100">
-      <nav className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-[#07080d]/80 p-3 backdrop-blur">
-        <span className="mr-3 hidden items-center gap-2 text-xs font-bold uppercase tracking-widest sm:flex">
+      <nav className="flex items-center gap-2 border-b border-white/10 bg-[#07080d]/80 p-3 backdrop-blur">
+        <span className="mr-3 hidden shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-widest sm:flex">
           <span className="h-2.5 w-2.5 rounded-full bg-[#8f9bff] shadow-[0_0_12px_#8f9bff]" />
           Fitness Addicted Gym
         </span>
-        {isStaff ? (
-          <>
-            <NavLink to="/checkin" className={linkClass}>Check-in</NavLink>
-            <NavLink to="/members" className={linkClass}>Members</NavLink>
-            <NavLink to="/expiring" className={linkClass}>Expiring</NavLink>
-            <NavLink to="/occupancy" className={linkClass}>Occupancy</NavLink>
-            {isAdmin && (
-              <>
-                <NavLink to="/plans" className={linkClass}>Plans</NavLink>
-                <NavLink to="/users" className={linkClass}>Staff</NavLink>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <NavLink to="/notifications" className={linkClass}>Notifications</NavLink>
-            <NavLink to="/subscriptions" className={linkClass}>Subscriptions</NavLink>
-            <NavLink to="/payments" className={linkClass}>Payments</NavLink>
-            <NavLink to="/attendance" className={linkClass}>Visits</NavLink>
-            <NavLink to="/profile" className={linkClass}>Profile</NavLink>
-          </>
-        )}
-        <NavLink to="/change-password" className={linkClass}>Password</NavLink>
-        <span className="ml-auto text-xs text-neutral-400">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {isStaff ? (
+            <>
+              <NavLink to="/dashboard" className={linkClass}>Dashboard</NavLink>
+              <NavLink to="/checkin" className={linkClass}>Check-in</NavLink>
+              <NavLink to="/members" className={linkClass}>Members</NavLink>
+              <NavLink to="/expiring" className={linkClass}>Expiring</NavLink>
+              <NavLink to="/occupancy" className={linkClass}>Occupancy</NavLink>
+              {isAdmin && (
+                <>
+                  <NavLink to="/plans" className={linkClass}>Plans</NavLink>
+                  <NavLink to="/users" className={linkClass}>Staff</NavLink>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <NavLink to="/notifications" className={linkClass}>Notifications</NavLink>
+              <NavLink to="/subscriptions" className={linkClass}>Subscriptions</NavLink>
+              <NavLink to="/payments" className={linkClass}>Payments</NavLink>
+              <NavLink to="/attendance" className={linkClass}>Visits</NavLink>
+              <NavLink to="/profile" className={linkClass}>Profile</NavLink>
+            </>
+          )}
+          <NavLink to="/change-password" className={linkClass}>Password</NavLink>
+        </div>
+        <span className="hidden shrink-0 text-xs text-neutral-400 lg:block">
           {me?.email} ({me?.role.toLowerCase()})
         </span>
-        <button onClick={() => void signOut()} className="btn-pill px-4 py-1.5 text-sm text-white">
+        <button onClick={() => void signOut()} className="btn-pill shrink-0 px-4 py-1.5 text-sm text-white">
           Sign out
         </button>
       </nav>
@@ -110,6 +114,7 @@ function App() {
             <Route path="/payments" element={<RequireRole staff={false}><Payments /></RequireRole>} />
             <Route path="/attendance" element={<RequireRole staff={false}><Attendance /></RequireRole>} />
             <Route path="/profile" element={<RequireRole staff={false}><ProfilePage /></RequireRole>} />
+            <Route path="/dashboard" element={<RequireRole staff><Dashboard /></RequireRole>} />
             <Route path="/checkin" element={<RequireRole staff><CheckIn /></RequireRole>} />
             <Route path="/members" element={<RequireRole staff><Members /></RequireRole>} />
             <Route path="/members/:id" element={<RequireRole staff><MemberDetail /></RequireRole>} />

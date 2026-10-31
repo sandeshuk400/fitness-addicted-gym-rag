@@ -51,4 +51,11 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     @Query("update Subscription s set s.status = :to where s.status = :from and s.endDate < :today")
     int expireEnded(@Param("from") SubscriptionStatus from, @Param("to") SubscriptionStatus to,
                     @Param("today") LocalDate today);
+
+    /** Distinct members whose ACTIVE subscription covers the given day. */
+    @Query("select count(distinct s.memberId) from Subscription s "
+            + "where s.status = :status and s.startDate <= :day and s.endDate >= :day")
+    long countMembersCovered(@Param("status") SubscriptionStatus status, @Param("day") LocalDate day);
+
+    long countByStatusAndEndDateBetween(SubscriptionStatus status, LocalDate from, LocalDate to);
 }
