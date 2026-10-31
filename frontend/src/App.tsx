@@ -16,10 +16,11 @@ import ChangePassword from './pages/ChangePassword'
 import Register from './pages/Register'
 import Plans from './pages/admin/Plans'
 import Users from './pages/admin/Users'
+import Starfield from './components/Starfield'
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { me, loading } = useAuth()
-  if (loading) return <p className="p-6 text-neutral-400">Loading...</p>
+  if (loading) return <p className="relative z-10 p-6 text-neutral-400">Loading...</p>
   return me ? children : <Navigate to="/login" replace />
 }
 
@@ -41,8 +42,10 @@ function Home() {
 }
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `rounded px-3 py-1.5 text-sm ${
-    isActive ? 'bg-neutral-800 text-white' : 'text-neutral-400 hover:text-white'
+  `rounded-full px-3.5 py-1.5 text-sm transition ${
+    isActive
+      ? 'bg-[#8f9bff]/15 text-white ring-1 ring-[#8f9bff]/50'
+      : 'text-neutral-400 hover:bg-white/5 hover:text-white'
   }`
 
 function Layout() {
@@ -50,8 +53,12 @@ function Layout() {
   const isStaff = me?.role === 'ADMIN' || me?.role === 'STAFF'
   const isAdmin = me?.role === 'ADMIN'
   return (
-    <div className="min-h-screen bg-charcoal text-neutral-100">
-      <nav className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-forest p-3">
+    <div className="relative z-10 min-h-screen text-neutral-100">
+      <nav className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-[#07080d]/80 p-3 backdrop-blur">
+        <span className="mr-3 hidden items-center gap-2 text-xs font-bold uppercase tracking-widest sm:flex">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#8f9bff] shadow-[0_0_12px_#8f9bff]" />
+          Fitness Addicted Gym
+        </span>
         {isStaff ? (
           <>
             <NavLink to="/checkin" className={linkClass}>Check-in</NavLink>
@@ -75,13 +82,10 @@ function Layout() {
           </>
         )}
         <NavLink to="/change-password" className={linkClass}>Password</NavLink>
-        <span className="ml-auto text-sm text-neutral-400">
+        <span className="ml-auto text-xs text-neutral-400">
           {me?.email} ({me?.role.toLowerCase()})
         </span>
-        <button
-          onClick={() => void signOut()}
-          className="rounded px-3 py-1.5 text-sm text-neutral-300 hover:text-white"
-        >
+        <button onClick={() => void signOut()} className="btn-pill px-4 py-1.5 text-sm text-white">
           Sign out
         </button>
       </nav>
@@ -95,6 +99,7 @@ function Layout() {
 function App() {
   return (
     <BrowserRouter>
+      <Starfield />
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />

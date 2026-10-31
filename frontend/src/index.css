@@ -1,13 +1,150 @@
 @import "tailwindcss";
 
 @theme {
-  --color-charcoal: #171717;
-  --color-forest: #06110c;
-  --color-crimson: #a31c1b;
-  --color-crimson-dark: #861615;
+  --color-charcoal: #07080d;
+  --color-forest: #0e1018;
+  --color-crimson: #5b69d6;
+  --color-crimson-dark: #4a57bf;
+  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root {
+  --tube: #8f9bff;
+  --tube-deep: #6b78d8;
+  --gold: #d6aa5a;
 }
 
 body {
-  background-color: var(--color-charcoal);
-  color: #f5f5f5;
+  background-color: #05060a;
+  color: #e9eaf2;
+}
+
+/* ---------- starfield ---------- */
+.starfield {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 36%, rgba(111, 124, 224, 0.16), transparent 70%),
+    #05060a;
+}
+.stars {
+  position: absolute;
+  inset: 0;
+}
+.stars-a {
+  background-size: 380px 380px;
+  background-image:
+    radial-gradient(1px 1px at 12% 22%, #fff, transparent),
+    radial-gradient(1px 1px at 38% 68%, #cfd6ff, transparent),
+    radial-gradient(1.5px 1.5px at 64% 14%, #fff, transparent),
+    radial-gradient(1px 1px at 82% 52%, #cfd6ff, transparent),
+    radial-gradient(1px 1px at 91% 88%, #fff, transparent),
+    radial-gradient(1px 1px at 24% 91%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 52% 40%, #cfd6ff, transparent);
+  opacity: 0.75;
+  animation: star-twinkle 7s ease-in-out infinite alternate;
+}
+.stars-b {
+  background-size: 610px 610px;
+  background-image:
+    radial-gradient(1px 1px at 8% 60%, #fff, transparent),
+    radial-gradient(1px 1px at 30% 12%, #cfd6ff, transparent),
+    radial-gradient(1.5px 1.5px at 55% 82%, #fff, transparent),
+    radial-gradient(1px 1px at 72% 30%, #fff, transparent),
+    radial-gradient(1px 1px at 95% 66%, #cfd6ff, transparent);
+  opacity: 0.5;
+  animation: star-twinkle 11s ease-in-out -4s infinite alternate;
+}
+.star-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 90% 80% at 50% 45%, transparent 45%, rgba(0, 0, 0, 0.6) 100%);
+}
+@keyframes star-twinkle {
+  from { opacity: 0.35; }
+  to { opacity: 0.85; }
+}
+
+/* ---------- glass card + pill button ---------- */
+.glass {
+  background: rgba(14, 16, 24, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.btn-pill {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  background:
+    linear-gradient(#0b0d14, #0b0d14) padding-box,
+    linear-gradient(100deg, rgba(143, 155, 255, 0.7), rgba(255, 255, 255, 0.14) 50%, rgba(214, 170, 90, 0.7)) border-box;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 22px rgba(143, 155, 255, 0.25);
+}
+.btn-pill:active {
+  transform: translateY(1px);
+}
+
+/* ---------- liquid tube clock ---------- */
+.liquid-clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5%;
+  width: min(760px, 94vw);
+  filter: drop-shadow(0 0 28px rgba(143, 155, 255, 0.25));
+}
+.tube-digit {
+  flex: 1 1 0;
+  min-width: 0;
+  height: auto;
+  overflow: visible;
+  transform-origin: 50% 100%;
+  animation: tube-settle 0.7s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+.tube-colon {
+  flex: 0 0 3%;
+  min-width: 0;
+  height: auto;
+  overflow: visible;
+}
+.tube-digit path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.t-glow { stroke: var(--tube); stroke-width: 20; opacity: 0.45; filter: blur(7px); }
+.t-body { stroke: var(--tube-deep); stroke-width: 13; }
+.t-mid { stroke: var(--tube); stroke-width: 8; opacity: 0.85; }
+.t-shine { stroke: #fff; stroke-width: 2.6; opacity: 0.55; transform: translate(-3px, -3px); }
+.t-dot {
+  fill: var(--tube-deep);
+  stroke: var(--tube);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px var(--tube));
+  animation: tube-blink 1s steps(1) infinite;
+}
+@keyframes tube-settle {
+  0% { transform: scaleY(1.14) scaleX(0.94); opacity: 0.6; }
+  60% { transform: scaleY(0.97) scaleX(1.02); }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes tube-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stars-a, .stars-b, .tube-digit, .t-dot {
+    animation: none;
+  }
 }
