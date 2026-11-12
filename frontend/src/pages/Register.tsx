@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError, api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -6,7 +6,8 @@ import { useAuth } from '../auth/AuthContext'
 const PHONE_OK = /^[0-9+\- ]{7,20}$/
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const input =
-  'w-full rounded-lg border border-white/20 bg-charcoal px-3 py-1.5 text-sm text-white focus:border-crimson focus:outline-none'
+  'w-full rounded-lg border border-white/10 bg-charcoal px-3 py-2 text-sm text-white outline-none focus:border-[#8f9bff]'
+const label = 'flex flex-col gap-1 text-left text-xs text-neutral-300'
 
 export default function Register() {
   const { signIn } = useAuth()
@@ -22,11 +23,18 @@ export default function Register() {
   const [busy, setBusy] = useState(false)
 
   const phoneBad = !!phone.trim() && !PHONE_OK.test(phone.trim())
-  const valid =
-    !!fullName.trim() && EMAIL_OK.test(email.trim()) && password.length >= 8 && password.length <= 72 &&
-    !phoneBad && acceptTerms
 
-  const submit = async () => {
+  const missing: string[] = []
+  if (!fullName.trim()) missing.push('your name')
+  if (!EMAIL_OK.test(email.trim())) missing.push('a valid email')
+  if (password.length < 8) missing.push('a password of at least 8 characters')
+  if (phoneBad) missing.push('a valid phone number')
+  if (!acceptTerms) missing.push('the terms checkbox')
+  const valid = missing.length === 0
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (!valid || busy) return
     setBusy(true)
     setError('')
     try {
@@ -42,8 +50,8 @@ export default function Register() {
           aiProcessingConsent: ai,
         }),
       })
-    } catch (e) {
-      setError(e instanceof ApiError && e.message ? e.message : 'Could not register.')
+    } catch (err) {
+      setError(err instanceof ApiError && err.message ? err.message : 'Could not register.')
       setBusy(false)
       return
     }
@@ -55,61 +63,71 @@ export default function Register() {
     }
   }
 
-  const label = 'flex flex-col gap-1 text-sm text-neutral-300'
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-charcoal p-4 text-neutral-100">
-      <div className="w-full max-w-md space-y-4 rounded-2xl border border-white/10 bg-forest p-6">
-        <h1 className="text-center text-2xl font-bold">Create your account</h1>
+    <div className="relative z-10 flex min-h-screen items-center justify-center p-4 text-neutral-100">
+      <form onSubmit={submit} className="glass w-full max-w-md space-y-4 p-6 sm:p-8">
+        <div className="text-center">
+          <p className="text-xs uppercase tracking-widest text-neutral-400">Fitness Addicted Gym</p>
+          <h1 className="mt-2 text-xl font-bold text-white">Create your account</h1>
+        </div>
 
-        <label className={label}>
+        <label className={label} htmlFor="fullName">
           Full name
-          <input value={fullName} maxLength={150} onChange={(e) => setFullName(e.target.value)} className={input} />
+          <input id="fullName" name="fullName" autoComplete="name" value={fullName} maxLength={150}
+            onChange={(e) => setFullName(e.target.value)} className={input} />
         </label>
-        <label className={label}>
+        <label className={label} htmlFor="email">
           Email
-          <input type="email" value={email} maxLength={255} onChange={(e) => setEmail(e.target.value)} className={input} />
+          <input id="email" name="email" type="email" autoComplete="username" value={email} maxLength={255}
+            onChange={(e) => setEmail(e.target.value)} className={input} />
         </label>
-        <label className={label}>
+        <label className={label} htmlFor="phone">
           Phone (optional)
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} className={input} />
+          <input id="phone" name="phone" type="tel" autoComplete="tel" value={phone}
+            onChange={(e) => setPhone(e.target.value)} className={input} />
         </label>
         {phoneBad && <p className="text-sm text-red-300">Phone must be 7-20 digits, spaces, + or -.</p>}
-        <label className={label}>
+        <label className={label} htmlFor="password">
           Password (8 to 72 characters)
-          <input type="password" maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
+          <input id="password" name="password" type="password" autoComplete="new-password" maxLength={72}
+            value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
         </label>
 
         <div className="space-y-2 text-sm text-neutral-300">
-          <label className="flex items-start gap-2">
-            <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
+          <label className="flex items-start gap-2" htmlFor="acceptTerms">
+            <input id="acceptTerms" name="acceptTerms" type="checkbox" checked={acceptTerms}
+              onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
             I accept the terms (required)
           </label>
-          <label className="flex items-start gap-2">
-            <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} className="mt-1" />
+          <label className="flex items-start gap-2" htmlFor="marketing">
+            <input id="marketing" name="marketing" type="checkbox" checked={marketing}
+              onChange={(e) => setMarketing(e.target.checked)} className="mt-1" />
             Send me offers and news (optional)
           </label>
-          <label className="flex items-start gap-2">
-            <input type="checkbox" checked={ai} onChange={(e) => setAi(e.target.checked)} className="mt-1" />
+          <label className="flex items-start gap-2" htmlFor="ai">
+            <input id="ai" name="ai" type="checkbox" checked={ai}
+              onChange={(e) => setAi(e.target.checked)} className="mt-1" />
             Allow AI processing of my data for personalised advice (optional)
           </label>
         </div>
 
         {error && (
-          <p className="rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>
+          <p role="alert" className="rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>
         )}
 
-        <button
-          disabled={!valid || busy}
-          onClick={() => void submit()}
-          className="w-full rounded-lg bg-crimson py-2 font-semibold text-white hover:bg-crimson-dark disabled:opacity-60"
-        >
+        {!valid && (
+          <p className="text-xs text-neutral-400">Still needed: {missing.join(', ')}.</p>
+        )}
+
+        <button type="submit" disabled={!valid || busy}
+          className="btn-pill w-full px-6 py-2.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
           {busy ? 'Creating...' : 'Create account'}
         </button>
         <p className="text-center text-sm text-neutral-400">
-          Already have an account? <Link to="/login" className="text-white hover:text-crimson">Sign in</Link>
+          Already have an account?{' '}
+          <Link to="/login" className="text-white underline decoration-[#8f9bff]/60 underline-offset-4 hover:text-[#c9cfff]">Sign in</Link>
         </p>
-      </div>
+      </form>
     </div>
   )
 }

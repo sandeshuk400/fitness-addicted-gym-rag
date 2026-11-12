@@ -141,11 +141,27 @@ export default function Users() {
         <div className="space-y-4 rounded-xl border border-white/10 bg-forest p-5">
           <label className={label}>
             Email
-            <input type="email" value={email} maxLength={255} onChange={(e) => setEmail(e.target.value)} className={input} />
+            <input
+              type="email"
+              name="new-staff-email"
+              autoComplete="off"
+              value={email}
+              maxLength={255}
+              onChange={(e) => setEmail(e.target.value)}
+              className={input}
+            />
           </label>
           <label className={label}>
             Temporary password (8 to 72 characters)
-            <input type="password" value={password} maxLength={72} onChange={(e) => setPassword(e.target.value)} className={input} />
+            <input
+              type="password"
+              name="new-staff-password"
+              autoComplete="new-password"
+              value={password}
+              maxLength={72}
+              onChange={(e) => setPassword(e.target.value)}
+              className={input}
+            />
           </label>
           <label className={label}>
             Role

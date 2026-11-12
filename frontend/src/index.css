@@ -148,3 +148,12 @@ body {
     animation: none;
   }
 }
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #e9eaf2;
+  caret-color: #e9eaf2;
+  box-shadow: 0 0 0 1000px #07080d inset;
+  transition: background-color 9999s ease-out 0s;
+}
