@@ -212,7 +212,9 @@ export default function MemberDetail() {
                 <p className="font-semibold text-white">{s.planName}</p>
                 <p className="text-sm text-neutral-300">{s.startDate} to {s.endDate}</p>
                 <p className="mt-1 text-sm text-neutral-400">
-                  {s.daysRemaining} days left · freeze days used {s.frozenDaysUsed}
+                  {s.status === 'PENDING'
+                    ? `Starts ${s.startDate}`
+                    : `${s.daysRemaining} days left · freeze days used ${s.frozenDaysUsed}`}
                   {s.frozenUntil ? ` · frozen until ${s.frozenUntil}` : ''}
                 </p>
               </div>
