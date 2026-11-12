@@ -39,6 +39,9 @@ const METHODS = ['CASH', 'UPI', 'CARD']
 // Display only. The server decides the real fee; keep this equal to app.membership.joining-fee.
 const JOINING_FEE = 500
 
+// Display only. The server enforces the real window; keep this equal to the refund window in application.yml.
+const REFUND_WINDOW_DAYS = 7
+
 const btn =
   'rounded-lg bg-crimson px-4 py-1.5 text-sm font-semibold text-white hover:bg-crimson-dark disabled:opacity-60'
 const btnGhost =
@@ -123,6 +126,10 @@ export default function MemberDetail() {
   const askCancel = (s: Subscription) => {
     if (window.confirm(`Cancel the ${s.planName} membership? This cannot be undone.`)) cancel.mutate(s.id)
   }
+
+  const refundWindowOpen = (p: Payment) =>
+  !!p.paidAt && Date.now() - new Date(p.paidAt).getTime() <= REFUND_WINDOW_DAYS * 24 * 60 * 60 * 1000
+
   const askRefund = (p: Payment) => {
     const reason = window.prompt(`Refund ${money(p.amount, p.currency)}? Enter a reason:`)
     if (reason && reason.trim()) refund.mutate({ payId: p.id, reason: reason.trim() })
@@ -299,10 +306,14 @@ export default function MemberDetail() {
                       <span className="text-xs text-neutral-500">Non-refundable</span>
                     )}
                     {p.status === 'PAID' && p.kind !== 'JOINING_FEE' && (
-                      <button disabled={busy} onClick={() => askRefund(p)} className={btnGhost}>
+                      refundWindowOpen(p) ? (
+                       <button disabled={busy} onClick={() => askRefund(p)} className={btnGhost}>
                         Refund
                       </button>
-                    )}
+                      ) : (
+                     <span className="text-xs text-neutral-500">Refund window closed</span>
+                  )
+                )}
                   </td>
                 </tr>
               ))}
