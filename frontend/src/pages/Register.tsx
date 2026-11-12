@@ -6,7 +6,7 @@ import { useAuth } from '../auth/AuthContext'
 const PHONE_OK = /^[0-9+\- ]{7,20}$/
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const input =
-  'w-full rounded-lg border border-white/10 bg-charcoal px-3 py-2 text-sm text-white outline-none focus:border-[#8f9bff]'
+  'w-full rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#8f9bff]'
 const label = 'flex flex-col gap-1 text-left text-xs text-neutral-300'
 
 export default function Register() {

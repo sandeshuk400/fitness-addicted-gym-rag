@@ -22,3 +22,5 @@ application-local.yml
 
 # Logs
 *.log
+
+backups/
