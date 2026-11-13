@@ -3,10 +3,10 @@ package com.fitnessaddicted.gym.common;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
-import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +30,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
+
 /**
  * Stateless JWT security.
  * Access tokens are HS256 JWTs issued by this application; roles come from the "roles" claim.
@@ -48,6 +50,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/device/events").permitAll()
                 .requestMatchers(HttpMethod.POST,
                         "/api/v1/auth/register",
                         "/api/v1/auth/login",

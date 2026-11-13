@@ -1,6 +1,7 @@
 package com.fitnessaddicted.gym.attendance.repository;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -13,6 +14,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     Optional<Attendance> findFirstByMemberIdAndCheckOutIsNullAndCheckInAfterOrderByCheckInDesc(
             Long memberId, Instant after);
+
+    Optional<Attendance> findByMemberIdAndVisitDate(Long memberId, LocalDate visitDate);
 
     long countByCheckOutIsNullAndCheckInAfter(Instant after);
     long countByCheckInGreaterThanEqual(Instant from);

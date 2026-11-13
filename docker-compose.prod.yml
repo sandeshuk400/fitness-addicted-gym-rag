@@ -35,6 +35,7 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      APP_DEVICE_API_KEY: ${DEVICE_API_KEY:-}
     restart: unless-stopped
 
   frontend:

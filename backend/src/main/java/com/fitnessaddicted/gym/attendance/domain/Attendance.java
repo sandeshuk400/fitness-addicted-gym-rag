@@ -1,6 +1,9 @@
 package com.fitnessaddicted.gym.attendance.domain;
 
 import java.time.Instant;
+import java.time.LocalDate;
+
+import com.fitnessaddicted.gym.common.AppTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
 
 /** One gym visit. checkOut stays null while the member is inside. */
 @Entity
@@ -32,6 +36,9 @@ public class Attendance {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private AttendanceSource source;
+
+    @Column(name = "visit_date", nullable = false)
+    private LocalDate visitDate = AppTime.today();
 
     protected Attendance() {
         // for JPA

@@ -61,6 +61,10 @@ public class AttendanceService {
         if (findOpenVisit(memberId) != null) {
             throw ApiException.conflict("Member is already checked in");
         }
+        var today = attendance.findByMemberIdAndVisitDate(memberId, AppTime.today());
+        if (today.isPresent()) {
+            return AttendanceResponse.from(today.get()); // re-entry the same day: no second row
+        }
         return AttendanceResponse.from(attendance.save(new Attendance(memberId, AttendanceSource.FRONT_DESK)));
     }
 
@@ -71,6 +75,10 @@ public class AttendanceService {
             throw ApiException.conflict("Member is not checked in");
         }
         open.checkOut(Instant.now());
+                var today = attendance.findByMemberIdAndVisitDate(memberId, AppTime.today());
+        if (today.isPresent()) {
+            return AttendanceResponse.from(today.get()); // re-entry the same day: no second row
+        }
         return AttendanceResponse.from(open);
     }
 
