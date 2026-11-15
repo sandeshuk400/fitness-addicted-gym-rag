@@ -160,7 +160,8 @@ class PaymentIntegrationTest {
         sell(staff, member.id(), Map.of("planId", quarterly.get("id").asLong()));
 
         JsonNode payments = myPayments(member);
-        assertEquals(2, payments.size());
+        // Two sales plus the one-time joining fee, which sits last (oldest) in the list.
+        assertEquals(3, payments.size());
 
         // Newest first: the quarterly (CASH) sale, then the monthly (UPI) sale.
         JsonNode cash = payments.get(0);
@@ -184,6 +185,24 @@ class PaymentIntegrationTest {
     }
 
     @Test
+    void joiningFeeIsChargedOnlyOnTheFirstSale() throws Exception {
+        String staff = staffToken();
+        Member member = newMember();
+        JsonNode monthly = plan("Monthly");
+        long monthlyId = monthly.get("id").asLong();
+
+        sell(staff, member.id(), Map.of("planId", monthlyId));
+        JsonNode afterFirst = myPayments(member);
+        assertEquals(2, afterFirst.size(), "first sale = plan payment + joining fee");
+        // Newest first: the plan payment, then the fee, which is not the plan price.
+        assertEquals(0, money(monthly.get("price")).compareTo(money(afterFirst.get(0).get("amount"))));
+        assertNotEquals(0, money(monthly.get("price")).compareTo(money(afterFirst.get(1).get("amount"))));
+
+        sell(staff, member.id(), Map.of("planId", monthlyId));
+        assertEquals(3, myPayments(member).size(), "second sale adds only the plan payment");
+    }
+
+    @Test
     void paymentsAreVisibleOnlyToTheOwnerAndStaff() throws Exception {
         String staff = staffToken();
         Member owner = newMember();
@@ -194,7 +213,7 @@ class PaymentIntegrationTest {
         MvcResult asStaff = mockMvc.perform(get("/api/v1/members/" + owner.id() + "/payments")
                         .header("Authorization", staff))
                 .andExpect(status().isOk()).andReturn();
-        assertEquals(1, read(asStaff).size());
+        assertEquals(2, read(asStaff).size()); // plan payment + joining fee
         mockMvc.perform(get("/api/v1/members/" + owner.id() + "/payments")
                         .header("Authorization", stranger.token()))
                 .andExpect(status().isForbidden());

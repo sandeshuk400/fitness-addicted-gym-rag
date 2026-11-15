@@ -176,9 +176,11 @@ class EmailQueueIntegrationTest {
 
         String receiptNumber = myPayments(member).get(0).get("receiptNumber").asText();
         List<String> emails = emailMessages(member.id(), "PAYMENT_RECEIPT");
-        assertEquals(1, emails.size());
-        assertTrue(emails.get(0).contains(receiptNumber), emails.get(0));
-        assertEquals(1, inAppCount(member.id(), "PAYMENT_RECEIPT"));
+        
+        // A first sale is two payments (joining fee + plan), so two receipts.
+        assertEquals(2, emails.size());
+        assertTrue(emails.stream().anyMatch(m -> m.contains(receiptNumber)), emails.toString());
+        assertEquals(2, inAppCount(member.id(), "PAYMENT_RECEIPT"));
     }
 
     @Test

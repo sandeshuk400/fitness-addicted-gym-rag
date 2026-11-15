@@ -295,8 +295,8 @@ class NotificationIntegrationTest {
             assertNotNull(read(marked).get("readAt"));
         }
         assertEquals(0, unreadOfType(owner, EXPIRY));
-        // Only the sale's receipt is still unread.
-        assertEquals(1, unreadCount(owner));
+        // Only the sale's two receipts (joining fee + plan) are still unread.
+        assertEquals(2, unreadCount(owner));
     }
 
     // ---------- freeze ended ----------
@@ -342,16 +342,20 @@ class NotificationIntegrationTest {
         sell(staff, member.id(), "Monthly");
 
         List<JsonNode> receipts = notificationsOfType(member, RECEIPT);
-        assertEquals(1, receipts.size());
+        // A first sale is two payments (joining fee + plan), so two receipt notices.
+        assertEquals(2, receipts.size());
         String receiptNumber = myPayments(member).get(0).get("receiptNumber").asText();
-        String message = receipts.get(0).get("message").asText();
-        assertTrue(message.contains(receiptNumber), message);
+        JsonNode planReceipt = receipts.stream()
+        .filter(n -> n.get("message").asText().contains(receiptNumber))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("No receipt notice mentions " + receiptNumber));
+        String message = planReceipt.get("message").asText();
         assertTrue(message.contains("Monthly"), message);
-        assertFalse(receipts.get(0).get("read").asBoolean());
+        assertFalse(planReceipt.get("read").asBoolean());
 
-        // A second sale is a second payment, so a second receipt (not a duplicate of the first).
+        // A second sale has no joining fee: one more payment, so one more receipt (not a duplicate).
         sell(staff, member.id(), "Quarterly");
-        assertEquals(2, notificationsOfType(member, RECEIPT).size());
+        assertEquals(3, notificationsOfType(member, RECEIPT).size());
     }
 
         // ---------- payment refunds ----------
@@ -425,7 +429,7 @@ class NotificationIntegrationTest {
 
         sell(staff, member.id(), "Monthly");
 
-        assertEquals(1, notificationsOfType(member, RECEIPT).size());
+        assertEquals(2, notificationsOfType(member, RECEIPT).size()); // joining fee + plan
         assertEquals(0, (int) jdbc.queryForObject(
                 "SELECT count(*) FROM notification WHERE user_id = ? AND channel = 'EMAIL'",
                 Integer.class, member.id()));
