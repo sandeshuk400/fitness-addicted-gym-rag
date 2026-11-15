@@ -68,7 +68,7 @@ function Layout() {
               <NavLink to="/checkin" className={linkClass}>Check-in</NavLink>
               <NavLink to="/members" className={linkClass}>Members</NavLink>
               <NavLink to="/expiring" className={linkClass}>Expiring</NavLink>
-              <NavLink to="/occupancy" className={linkClass}>Occupancy</NavLink>
+              <NavLink to="/occupancy" className={linkClass}>Visited today</NavLink>
               <NavLink to="/door-log" className={linkClass}>Door log</NavLink>
               {isAdmin && (
                 <>

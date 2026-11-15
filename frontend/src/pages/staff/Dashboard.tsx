@@ -53,8 +53,7 @@ export default function Dashboard() {
 
       {d && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <Card label="Inside now" value={String(d.insideNow)} hint="Checked in, not yet out" to="/occupancy" />
-          <Card label="Check-ins today" value={String(d.checkInsToday)} to="/checkin" />
+          <Card label="Visited today" value={String(d.checkInsToday)} hint="Members who came in, counted once a day" to="/occupancy" />
           <Card label="Active members" value={String(d.activeMembers)} hint={`of ${d.totalMembers} total`} to="/members" />
           <Card label="Expiring in 7 days" value={String(d.expiringIn7Days)} hint="Memberships ending soon" to="/expiring" />
           <Card label="Revenue this month" value={money.format(Number(d.revenueThisMonth))} hint="Paid, refunds excluded" />
