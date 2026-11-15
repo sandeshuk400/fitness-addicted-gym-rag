@@ -5,6 +5,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.fitnessaddicted.gym.common.ApiException;
 import com.fitnessaddicted.gym.common.AuditService;
 import com.fitnessaddicted.gym.common.PageResponse;
@@ -12,12 +19,6 @@ import com.fitnessaddicted.gym.member.api.MemberResponse;
 import com.fitnessaddicted.gym.member.api.UpdateMemberRequest;
 import com.fitnessaddicted.gym.member.domain.MemberProfile;
 import com.fitnessaddicted.gym.member.repository.MemberProfileRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MemberProfileService {
@@ -100,6 +101,28 @@ public class MemberProfileService {
             result = repository.findByFullNameContainingIgnoreCaseOrPhoneContaining(q, q, pageable);
         }
         return PageResponse.from(result.map(profile -> MemberResponse.from(profile, false)));
+    }
+
+    /**
+     * Staff/admin links a member to the number the door device knows them by, or clears it with null.
+     * A number can belong to one member only; a clash returns a clear message instead of a raw
+     * database error from the unique index. Health notes are never included in this response.
+     */
+    @Transactional
+    public MemberResponse setDeviceUserId(Long actorId, Long memberId, Integer deviceUserId) {
+        MemberProfile profile = find(memberId);
+        if (deviceUserId != null) {
+            repository.findByDeviceUserId(deviceUserId)
+                    .filter(other -> !other.getUserId().equals(memberId))
+                    .ifPresent(other -> {
+                        throw ApiException.conflict("Device number " + deviceUserId
+                                + " is already used by " + other.getFullName());
+                    });
+        }
+        profile.setDeviceUserId(deviceUserId);
+        audit.record(actorId, "DEVICE_USER_LINKED", "MemberProfile", String.valueOf(memberId),
+                Map.of("deviceUserId", String.valueOf(deviceUserId)));
+        return MemberResponse.from(profile, false);
     }
 
     private MemberProfile find(Long userId) {

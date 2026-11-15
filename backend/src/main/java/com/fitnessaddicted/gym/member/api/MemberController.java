@@ -2,12 +2,6 @@ package com.fitnessaddicted.gym.member.api;
 
 import java.util.List;
 
-import com.fitnessaddicted.gym.common.CurrentUser;
-import com.fitnessaddicted.gym.common.PageResponse;
-import com.fitnessaddicted.gym.member.domain.ConsentPurpose;
-import com.fitnessaddicted.gym.member.service.ConsentService;
-import com.fitnessaddicted.gym.member.service.MemberProfileService;
-import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -18,6 +12,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.fitnessaddicted.gym.common.CurrentUser;
+import com.fitnessaddicted.gym.common.PageResponse;
+import com.fitnessaddicted.gym.member.domain.ConsentPurpose;
+import com.fitnessaddicted.gym.member.service.ConsentService;
+import com.fitnessaddicted.gym.member.service.MemberProfileService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/members")
@@ -68,5 +70,13 @@ public class MemberController {
     @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
     public MemberResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
         return memberService.getForStaff(CurrentUser.id(jwt), CurrentUser.hasRole(jwt, "ADMIN"), id);
+    }
+
+    /** Staff/admin sets or clears the number the door device knows this member by. */
+    @PutMapping("/{id}/device-user")
+    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    public MemberResponse setDeviceUser(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+                                        @Valid @RequestBody UpdateDeviceUserRequest request) {
+        return memberService.setDeviceUserId(CurrentUser.id(jwt), id, request.deviceUserId());
     }
 }

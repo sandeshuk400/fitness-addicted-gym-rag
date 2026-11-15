@@ -6,7 +6,8 @@ import com.fitnessaddicted.gym.member.domain.MemberProfile;
 
 /** healthNotes is null unless the caller is allowed to see it (the member themself or an admin). */
 public record MemberResponse(Long userId, String fullName, String phone, LocalDate dateOfBirth, String gender,
-                             String emergencyContact, String healthNotes, LocalDate joinedOn) {
+                             String emergencyContact, String healthNotes, LocalDate joinedOn,
+                             Integer deviceUserId) {
 
     public static MemberResponse from(MemberProfile profile, boolean includeHealthNotes) {
         return new MemberResponse(
@@ -17,6 +18,7 @@ public record MemberResponse(Long userId, String fullName, String phone, LocalDa
                 profile.getGender(),
                 profile.getEmergencyContact(),
                 includeHealthNotes ? profile.getHealthNotes() : null,
-                profile.getJoinedOn());
+                profile.getJoinedOn(),
+                profile.getDeviceUserId());
     }
 }

@@ -11,6 +11,7 @@ import MemberDetail from './pages/staff/MemberDetail'
 import Occupancy from './pages/staff/Occupancy'
 import Expiring from './pages/staff/Expiring'
 import CheckIn from './pages/staff/CheckIn'
+import DoorLog from './pages/staff/DoorLog'
 import Attendance from './pages/Attendance'
 import ProfilePage from './pages/Profile'
 import ChangePassword from './pages/ChangePassword'
@@ -68,6 +69,7 @@ function Layout() {
               <NavLink to="/members" className={linkClass}>Members</NavLink>
               <NavLink to="/expiring" className={linkClass}>Expiring</NavLink>
               <NavLink to="/occupancy" className={linkClass}>Occupancy</NavLink>
+              <NavLink to="/door-log" className={linkClass}>Door log</NavLink>
               {isAdmin && (
                 <>
                   <NavLink to="/plans" className={linkClass}>Plans</NavLink>
@@ -120,6 +122,7 @@ function App() {
             <Route path="/members/:id" element={<RequireRole staff><MemberDetail /></RequireRole>} />
             <Route path="/expiring" element={<RequireRole staff><Expiring /></RequireRole>} />
             <Route path="/occupancy" element={<RequireRole staff><Occupancy /></RequireRole>} />
+            <Route path="/door-log" element={<RequireRole staff><DoorLog /></RequireRole>} />
             <Route path="/plans" element={<RequireAdmin><Plans /></RequireAdmin>} />
             <Route path="/users" element={<RequireAdmin><Users /></RequireAdmin>} />
             <Route path="/change-password" element={<ChangePassword />} />

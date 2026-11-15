@@ -9,6 +9,7 @@ type Member = {
   phone: string | null
   gender: string | null
   joinedOn: string
+  deviceUserId: number | null
 }
 type Subscription = {
   id: number
@@ -38,7 +39,6 @@ const METHODS = ['CASH', 'UPI', 'CARD']
 
 // Display only. The server decides the real fee; keep this equal to app.membership.joining-fee.
 const JOINING_FEE = 500
-
 // Display only. The server enforces the real window; keep this equal to the refund window in application.yml.
 const REFUND_WINDOW_DAYS = 7
 
@@ -59,6 +59,8 @@ export default function MemberDetail() {
   const [planId, setPlanId] = useState<number | ''>('')
   const [method, setMethod] = useState('CASH')
   const [reference, setReference] = useState('')
+  const [deviceNo, setDeviceNo] = useState<string | null>(null)
+  const [deviceError, setDeviceError] = useState('')
 
   const member = useQuery({ queryKey: ['member', id], queryFn: () => api<Member>(`/members/${id}`) })
   const subs = useQuery({
@@ -113,8 +115,21 @@ export default function MemberDetail() {
     onSuccess: () => { setReference(''); setPlanId(''); onSuccess() },
     onError,
   })
+  // Door access errors (for example "number already used") show inside the Door access box.
+  const saveDevice = useMutation({
+    mutationFn: (n: number | null) =>
+      api(`/members/${id}/device-user`, { method: 'PUT', body: JSON.stringify({ deviceUserId: n }) }),
+    onSuccess: () => {
+      setDeviceNo(null)
+      setDeviceError('')
+      queryClient.invalidateQueries({ queryKey: ['member', id] })
+    },
+    onError: (e: unknown) => setDeviceError(messageOf(e)),
+  })
 
-  const busy = freeze.isPending || unfreeze.isPending || cancel.isPending || refund.isPending || sell.isPending
+  const busy =
+    freeze.isPending || unfreeze.isPending || cancel.isPending || refund.isPending || sell.isPending ||
+    saveDevice.isPending
 
   const money = (amount: number, currency: string) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(amount)
@@ -126,10 +141,8 @@ export default function MemberDetail() {
   const askCancel = (s: Subscription) => {
     if (window.confirm(`Cancel the ${s.planName} membership? This cannot be undone.`)) cancel.mutate(s.id)
   }
-
   const refundWindowOpen = (p: Payment) =>
-  !!p.paidAt && Date.now() - new Date(p.paidAt).getTime() <= REFUND_WINDOW_DAYS * 24 * 60 * 60 * 1000
-
+    !!p.paidAt && Date.now() - new Date(p.paidAt).getTime() <= REFUND_WINDOW_DAYS * 24 * 60 * 60 * 1000
   const askRefund = (p: Payment) => {
     const reason = window.prompt(`Refund ${money(p.amount, p.currency)}? Enter a reason:`)
     if (reason && reason.trim()) refund.mutate({ payId: p.id, reason: reason.trim() })
@@ -150,6 +163,35 @@ export default function MemberDetail() {
       )}
 
       {error && <p className={errorBox}>{error}</p>}
+
+      {member.data && (() => {
+        const saved = member.data.deviceUserId
+        const value = deviceNo ?? (saved == null ? '' : String(saved))
+        const parsed = value.trim() === '' ? null : Number(value)
+        const valid = parsed === null || (Number.isInteger(parsed) && parsed >= 1)
+        const changed = parsed !== saved
+        return (
+          <>
+            <h2 className="mb-2 font-semibold">Door access</h2>
+            <div className="mb-6 rounded-xl border border-white/10 bg-forest p-4 text-sm text-neutral-300">
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="flex flex-col gap-1">
+                  Device number
+                  <input value={value} inputMode="numeric" maxLength={7}
+                    onChange={(e) => setDeviceNo(e.target.value)} className={`${input} w-32`} />
+                </label>
+                <button disabled={busy || !valid || !changed} onClick={() => saveDevice.mutate(parsed)} className={btn}>
+                  Save
+                </button>
+              </div>
+              <p className="mt-3 text-xs text-neutral-400">
+                Enrol the finger on the device first, then enter the same number here. Leave empty to remove door access.
+              </p>
+              {deviceError && <p className={`${errorBox} mt-3`}>{deviceError}</p>}
+            </div>
+          </>
+        )
+      })()}
 
       <h2 className="mb-2 font-semibold">Sell a membership</h2>
       <div className="mb-6 rounded-xl border border-white/10 bg-forest p-4 text-sm text-neutral-300">
@@ -307,13 +349,13 @@ export default function MemberDetail() {
                     )}
                     {p.status === 'PAID' && p.kind !== 'JOINING_FEE' && (
                       refundWindowOpen(p) ? (
-                       <button disabled={busy} onClick={() => askRefund(p)} className={btnGhost}>
-                        Refund
-                      </button>
+                        <button disabled={busy} onClick={() => askRefund(p)} className={btnGhost}>
+                          Refund
+                        </button>
                       ) : (
-                     <span className="text-xs text-neutral-500">Refund window closed</span>
-                  )
-                )}
+                        <span className="text-xs text-neutral-500">Refund window closed</span>
+                      )
+                    )}
                   </td>
                 </tr>
               ))}

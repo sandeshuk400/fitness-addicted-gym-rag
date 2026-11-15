@@ -3,6 +3,7 @@ package com.fitnessaddicted.gym.member.domain;
 import java.time.LocalDate;
 
 import com.fitnessaddicted.gym.common.AppTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -38,6 +39,10 @@ public class MemberProfile {
 
     @Column(name = "joined_on", nullable = false)
     private LocalDate joinedOn = AppTime.today();
+
+    /** The number the door fingerprint device knows this member by. No biometric data is stored here. */
+    @Column(name = "device_user_id")
+    private Integer deviceUserId;
 
     protected MemberProfile() {
         // for JPA
@@ -89,5 +94,13 @@ public class MemberProfile {
 
     public LocalDate getJoinedOn() {
         return joinedOn;
+    }
+
+    public Integer getDeviceUserId() {
+        return deviceUserId;
+    }
+
+    public void setDeviceUserId(Integer deviceUserId) {
+        this.deviceUserId = deviceUserId;
     }
 }
