@@ -21,6 +21,7 @@ export default function Register() {
   const [ai, setAi] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [biometric, setBiometric] = useState(false)
 
   const phoneBad = !!phone.trim() && !PHONE_OK.test(phone.trim())
 
@@ -48,6 +49,8 @@ export default function Register() {
           acceptTerms,
           marketingConsent: marketing,
           aiProcessingConsent: ai,
+          biometricConsent: biometric,
+          
         }),
       })
     } catch (err) {
@@ -108,6 +111,14 @@ export default function Register() {
             <input id="ai" name="ai" type="checkbox" checked={ai}
               onChange={(e) => setAi(e.target.checked)} className="mt-1" />
             Allow AI processing of my data for personalised advice (optional)
+          </label>
+          <label className="flex items-start gap-2" htmlFor="biometric">
+            <input id="biometric" name="biometric" type="checkbox" checked={biometric}
+              onChange={(e) => setBiometric(e.target.checked)} className="mt-1" />
+            <span>
+              Allow fingerprint door access (optional). Your fingerprint is stored on the door
+              device only, not in the gym's database.
+            </span>
           </label>
         </div>
 

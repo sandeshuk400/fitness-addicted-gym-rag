@@ -17,6 +17,7 @@ import com.fitnessaddicted.gym.common.AuditService;
 import com.fitnessaddicted.gym.common.PageResponse;
 import com.fitnessaddicted.gym.member.api.MemberResponse;
 import com.fitnessaddicted.gym.member.api.UpdateMemberRequest;
+import com.fitnessaddicted.gym.member.domain.ConsentPurpose;
 import com.fitnessaddicted.gym.member.domain.MemberProfile;
 import com.fitnessaddicted.gym.member.repository.MemberProfileRepository;
 
@@ -26,10 +27,13 @@ public class MemberProfileService {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final MemberProfileRepository repository;
+    private final ConsentService consents;
     private final AuditService audit;
 
-    public MemberProfileService(MemberProfileRepository repository, AuditService audit) {
+    public MemberProfileService(MemberProfileRepository repository, ConsentService consents,
+                                AuditService audit) {
         this.repository = repository;
+        this.consents = consents;
         this.audit = audit;
     }
 
@@ -111,6 +115,11 @@ public class MemberProfileService {
     @Transactional
     public MemberResponse setDeviceUserId(Long actorId, Long memberId, Integer deviceUserId) {
         MemberProfile profile = find(memberId);
+        if (deviceUserId != null && !consents.isGranted(memberId, ConsentPurpose.BIOMETRIC_DOOR)) {
+            throw ApiException.badRequest("This member has not agreed to fingerprint door access. "
+                    + "They can switch it on under Profile.");
+        }
+        
         if (deviceUserId != null) {
             repository.findByDeviceUserId(deviceUserId)
                     .filter(other -> !other.getUserId().equals(memberId))

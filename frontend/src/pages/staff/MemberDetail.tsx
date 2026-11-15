@@ -185,7 +185,7 @@ export default function MemberDetail() {
                 </button>
               </div>
               <p className="mt-3 text-xs text-neutral-400">
-                Enrol the finger on the device first, then enter the same number here. Leave empty to remove door access.
+                Enrol the finger on the device first, then enter the same number here. The member must switch on fingerprint door access under Profile first. Leave empty to remove door access.
               </p>
               {deviceError && <p className={`${errorBox} mt-3`}>{deviceError}</p>}
             </div>

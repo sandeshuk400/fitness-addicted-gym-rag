@@ -4,23 +4,28 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.fitnessaddicted.gym.common.ApiException;
 import com.fitnessaddicted.gym.common.AuditService;
 import com.fitnessaddicted.gym.member.api.ConsentResponse;
 import com.fitnessaddicted.gym.member.domain.ConsentPurpose;
 import com.fitnessaddicted.gym.member.domain.ConsentRecord;
 import com.fitnessaddicted.gym.member.repository.ConsentRecordRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import com.fitnessaddicted.gym.member.repository.MemberProfileRepository;
 
 @Service
 public class ConsentService {
 
     private final ConsentRecordRepository repository;
+    private final MemberProfileRepository profiles;
     private final AuditService audit;
 
-    public ConsentService(ConsentRecordRepository repository, AuditService audit) {
+    public ConsentService(ConsentRecordRepository repository, MemberProfileRepository profiles,
+                          AuditService audit) {
         this.repository = repository;
+        this.profiles = profiles;
         this.audit = audit;
     }
 
@@ -39,7 +44,26 @@ public class ConsentService {
         }
         ConsentResponse response = record(userId, purpose, granted);
         audit.record(userId, "CONSENT_CHANGED", "ConsentRecord", purpose.name(), Map.of("granted", granted));
+        if (purpose == ConsentPurpose.BIOMETRIC_DOOR && !granted) {
+            // Withdrawn consent ends the link to the door device. Staff must also delete the
+            // fingerprint on the device itself; the app cannot do that yet.
+            profiles.findById(userId).ifPresent(profile -> {
+                if (profile.getDeviceUserId() != null) {
+                    profile.setDeviceUserId(null);
+                    audit.record(userId, "DEVICE_USER_CLEARED", "MemberProfile", String.valueOf(userId),
+                            Map.of("reason", "biometric consent withdrawn"));
+                }
+            });
+        }
         return response;
+    }
+
+    /** True only if the member's latest decision for this purpose is a grant. */
+    @Transactional(readOnly = true)
+    public boolean isGranted(Long userId, ConsentPurpose purpose) {
+        return repository.findFirstByUserIdAndPurposeOrderByRecordedAtDescIdDesc(userId, purpose)
+                .map(ConsentRecord::isGranted)
+                .orElse(false);
     }
 
     /** Latest decision per purpose; purposes with no decision yet are reported as not granted. */

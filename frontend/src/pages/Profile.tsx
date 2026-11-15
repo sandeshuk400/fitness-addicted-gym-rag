@@ -107,6 +107,41 @@ function ProfileForm({ profile }: { profile: Profile }) {
   )
 }
 
+type Consent = { purpose: string; granted: boolean; recordedAt: string | null }
+
+function DoorConsent() {
+  const queryClient = useQueryClient()
+  const [error, setError] = useState('')
+  const q = useQuery({ queryKey: ['consents'], queryFn: () => api<Consent[]>('/members/me/consents') })
+  const granted = q.data?.find((c) => c.purpose === 'BIOMETRIC_DOOR')?.granted ?? false
+  const change = useMutation({
+    mutationFn: (g: boolean) =>
+      api('/members/me/consents/BIOMETRIC_DOOR', { method: 'PUT', body: JSON.stringify({ granted: g }) }),
+    onSuccess: () => { setError(''); queryClient.invalidateQueries({ queryKey: ['consents'] }) },
+    onError: (e) => setError(e instanceof ApiError && e.message ? e.message : 'Could not save.'),
+  })
+
+  return (
+    <div className="mt-6 rounded-xl border border-white/10 bg-forest p-5 text-sm text-neutral-300">
+      <h2 className="mb-1 font-semibold text-white">Fingerprint door access</h2>
+      <p className="text-neutral-400">
+        You can open the gym door with your fingerprint. It is stored on the door device only,
+        not in the gym&apos;s database. If you switch this off, the gym removes your access and
+        deletes your fingerprint from the device.
+      </p>
+      {q.isError && <p className="mt-3 text-red-300">Could not load this setting.</p>}
+      {q.data && (
+        <label className="mt-3 flex items-center gap-2">
+          <input type="checkbox" checked={granted} disabled={change.isPending}
+            onChange={(e) => change.mutate(e.target.checked)} />
+          I agree to fingerprint door access
+        </label>
+      )}
+      {error && <p className="mt-3 text-red-300">{error}</p>}
+    </div>
+  )
+}
+
 export default function ProfilePage() {
   const q = useQuery({ queryKey: ['profile'], queryFn: () => api<Profile>('/members/me') })
 
@@ -117,6 +152,7 @@ export default function ProfilePage() {
       {q.isLoading && <p className="text-neutral-400">Loading...</p>}
       {q.isError && <p className="text-red-300">Could not load your profile.</p>}
       {q.data && <ProfileForm key={q.data.userId} profile={q.data} />}
+      <DoorConsent />
     </div>
   )
 }

@@ -5,5 +5,10 @@ public enum ConsentPurpose {
     TERMS,
     HEALTH_DATA,
     MARKETING,
-    AI_PROCESSING
+    AI_PROCESSING,
+    
+    /** Using a fingerprint, stored on the door device only, to open the gym door. */
+    BIOMETRIC_DOOR
 }
+
+

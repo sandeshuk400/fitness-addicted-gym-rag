@@ -4,6 +4,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.fitnessaddicted.gym.auth.api.ChangePasswordRequest;
 import com.fitnessaddicted.gym.auth.api.LoginRequest;
 import com.fitnessaddicted.gym.auth.api.RegisterRequest;
@@ -18,9 +22,6 @@ import com.fitnessaddicted.gym.common.AuditService;
 import com.fitnessaddicted.gym.member.domain.ConsentPurpose;
 import com.fitnessaddicted.gym.member.service.ConsentService;
 import com.fitnessaddicted.gym.member.service.MemberProfileService;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -61,6 +62,7 @@ public class AuthService {
         consents.record(user.getId(), ConsentPurpose.TERMS, true);
         consents.record(user.getId(), ConsentPurpose.MARKETING, request.marketingConsent());
         consents.record(user.getId(), ConsentPurpose.AI_PROCESSING, request.aiProcessingConsent());
+        consents.record(user.getId(), ConsentPurpose.BIOMETRIC_DOOR, request.biometricConsent());
         audit.record(user.getId(), "USER_REGISTERED", "AppUser", String.valueOf(user.getId()), Map.of());
         return issueTokens(user);
     }

@@ -13,5 +13,6 @@ public record RegisterRequest(
         @Pattern(regexp = "^[0-9+\\- ]{7,20}$", message = "Phone must be 7-20 digits, spaces, + or -") String phone,
         @AssertTrue(message = "You must accept the terms to register") boolean acceptTerms,
         boolean marketingConsent,
-        boolean aiProcessingConsent) {
+        boolean aiProcessingConsent,
+        boolean biometricConsent) {
 }
