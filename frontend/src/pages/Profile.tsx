@@ -142,6 +142,38 @@ function DoorConsent() {
   )
 }
 
+function AIConsent() {
+  const queryClient = useQueryClient()
+  const [error, setError] = useState('')
+  const q = useQuery({ queryKey: ['consents'], queryFn: () => api<Consent[]>('/members/me/consents') })
+  const granted = q.data?.find((c) => c.purpose === 'AI_PROCESSING')?.granted ?? false
+  const change = useMutation({
+    mutationFn: (g: boolean) =>
+      api('/members/me/consents/AI_PROCESSING', { method: 'PUT', body: JSON.stringify({ granted: g }) }),
+    onSuccess: () => { setError(''); queryClient.invalidateQueries({ queryKey: ['consents'] }) },
+    onError: (e) => setError(e instanceof ApiError && e.message ? e.message : 'Could not save.'),
+  })
+
+  return (
+    <div className="mt-6 rounded-xl border border-white/10 bg-forest p-5 text-sm text-neutral-300">
+      <h2 className="mb-1 font-semibold text-white">AI Assistant consent</h2>
+      <p className="text-neutral-400">
+        You can allow our AI assistant to process your health notes and gym data to provide personalized help.
+        Your conversations are not stored.
+      </p>
+      {q.isError && <p className="mt-3 text-red-300">Could not load this setting.</p>}
+      {q.data && (
+        <label className="mt-3 flex items-center gap-2">
+          <input type="checkbox" checked={granted} disabled={change.isPending}
+            onChange={(e) => change.mutate(e.target.checked)} />
+          I agree to AI processing of my data
+        </label>
+      )}
+      {error && <p className="mt-3 text-red-300">{error}</p>}
+    </div>
+  )
+}
+
 export default function ProfilePage() {
   const q = useQuery({ queryKey: ['profile'], queryFn: () => api<Profile>('/members/me') })
 
@@ -153,6 +185,7 @@ export default function ProfilePage() {
       {q.isError && <p className="text-red-300">Could not load your profile.</p>}
       {q.data && <ProfileForm key={q.data.userId} profile={q.data} />}
       <DoorConsent />
+      <AIConsent />
     </div>
   )
 }
