@@ -4,8 +4,8 @@ A gym management system built with **Java 25, Spring Boot and React + TypeScript
 work of a gym: members, memberships, front-desk payments, attendance and a fingerprint-door integration,
 with privacy features (consent records and an audit log) built in from the start.
 
-> Status: **working and tested, not deployed.** The fingerprint door is simulated (no hardware yet), and
-> the AI assistant is planned but not built. See [Known limitations](#known-limitations) and the [roadmap](#roadmap).
+> Status: **working and tested, not deployed.** The fingerprint door is simulated (no hardware yet).
+> See [Known limitations](#known-limitations) and the [roadmap](#roadmap).
 
 ## Features
 
@@ -164,8 +164,7 @@ Never commit real values. `.env.prod` is ignored by Git, and `.env.example` cont
 - **Spring Boot 3.5 is out of free open-source support** (it ended on 2026-06-30). The app runs on the latest 3.5 patch.
   Moving to a supported release is planned.
 - **Payments are recorded manually** at the front desk. There is no online payment gateway.
-- **The AI assistant is not built.** The database has tables for it and Spring AI is on the classpath,
-  but no code uses them yet.
+- **The AI assistant is built and integrated.** It uses RAG to answer member questions based on the gym's policy documentation. It requires a local Ollama instance with Llama 3.2.
 
 ## Roadmap
 
@@ -179,7 +178,7 @@ Never commit real values. `.env.prod` is ignored by Git, and `.env.example` cont
 - [ ] Real device integration and member sync
 - [ ] HTTPS and hosting
 - [ ] Classes, bookings and trainer plans
-- [ ] AI assistant (RAG over the gym's own documents) with local models through Ollama
+- [x] AI assistant (RAG over the gym's own documents) with local models through Ollama
 - [ ] CI pipeline
 
 ## Project structure

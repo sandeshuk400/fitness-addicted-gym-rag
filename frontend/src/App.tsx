@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import Login from './pages/Login'
 import Notifications from './pages/Notifications'
+import ChatPage from './pages/ChatPage'
 import Subscriptions from './pages/Subscriptions'
 import Payments from './pages/Payments'
 import Dashboard from './pages/staff/Dashboard'
@@ -80,6 +81,7 @@ function Layout() {
           ) : (
             <>
               <NavLink to="/notifications" className={linkClass}>Notifications</NavLink>
+              <NavLink to="/chat" className={linkClass}>Assistant</NavLink>
               <NavLink to="/subscriptions" className={linkClass}>Subscriptions</NavLink>
               <NavLink to="/payments" className={linkClass}>Payments</NavLink>
               <NavLink to="/attendance" className={linkClass}>Visits</NavLink>
@@ -112,6 +114,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route element={<RequireAuth><Layout /></RequireAuth>}>
             <Route path="/notifications" element={<RequireRole staff={false}><Notifications /></RequireRole>} />
+            <Route path="/chat" element={<RequireRole staff={false}><ChatPage /></RequireRole>} />
             <Route path="/subscriptions" element={<RequireRole staff={false}><Subscriptions /></RequireRole>} />
             <Route path="/payments" element={<RequireRole staff={false}><Payments /></RequireRole>} />
             <Route path="/attendance" element={<RequireRole staff={false}><Attendance /></RequireRole>} />
