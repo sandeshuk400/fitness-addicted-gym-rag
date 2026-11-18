@@ -1,6 +1,7 @@
 package com.fitnessaddicted.gym.auth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -62,14 +63,17 @@ class JwtServiceTest {
 
         Duration lifetime = Duration.between(jwt.getIssuedAt(), jwt.getExpiresAt());
         assertEquals(Duration.ofMinutes(15), lifetime);
-        assertTrue(jwt.getExpiresAt().isAfter(Instant.now()));
+        Instant expiresAt = jwt.getExpiresAt();
+        assertNotNull(expiresAt);
+        assertTrue(expiresAt.isAfter(Instant.now()));
     }
 
     @Test
     void tokenSignedWithAnotherKeyIsRejected() {
         String token = service().create(adminUser()).value();
 
-        assertThrows(JwtException.class, () -> decoder(OTHER_SECRET).decode(token));
+        JwtException e = assertThrows(JwtException.class, () -> decoder(OTHER_SECRET).decode(token));
+        assertNotNull(e);
     }
 
     @Test
@@ -77,6 +81,7 @@ class JwtServiceTest {
         String token = service().create(adminUser()).value();
         String tampered = token.substring(0, token.length() - 3) + (token.endsWith("AAA") ? "BBB" : "AAA");
 
-        assertThrows(JwtException.class, () -> decoder(SECRET).decode(tampered));
+        JwtException e = assertThrows(JwtException.class, () -> decoder(SECRET).decode(tampered));
+        assertNotNull(e);
     }
 }
