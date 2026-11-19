@@ -30,6 +30,14 @@ with privacy features (consent records and an audit log) built in from the start
 
 **Staff dashboard:** members, active members, visited today, expiring memberships and monthly revenue.
 
+**AI assistant (RAG)**
+- Answers questions about plans, prices, opening hours and gym rules, using only the gym's own information
+- The knowledge is the live membership plans from the database plus a policy file (`backend/src/main/resources/knowledge/`),
+  split into sections, embedded with `nomic-embed-text` and stored in pgvector
+- Runs on a local model (`llama3.2`) through Ollama. Questions are not stored, and health notes never reach the model
+- Members must switch on AI assistance in their profile first. Questions with no matching knowledge get an honest
+  "I don't have that information" without calling the model
+
 **Privacy**
 - Purpose-specific consent records, stored as an append-only history
 - Separate, optional consent for fingerprint door access. Staff cannot link a device number without it,
@@ -71,6 +79,7 @@ The door log is read through a separate staff-only endpoint, so the device key c
 | Email | Spring Mail (SMTP), off unless enabled |
 | Testing | JUnit 5, MockMvc, Testcontainers (real PostgreSQL) |
 | DevOps | Docker, Docker Compose, Nginx |
+| AI | Spring AI, Ollama (`llama3.2`, `nomic-embed-text`), pgvector |
 
 ## Quick start (Docker, full stack)
 
@@ -108,6 +117,23 @@ Invoke-RestMethod -Method Post -Uri http://localhost/api/v1/device/events `
 The first scan of the day returns `ATTENDANCE_MARKED` and later ones `RE_ENTRY`. An unknown number returns
 `UNKNOWN_USER`. Everything shows up under **Door log**.
 
+### Try the assistant
+
+Install [Ollama](https://ollama.com) and pull the models, then set `OLLAMA_BASE_URL` in `.env.prod`:
+
+```powershell
+ollama pull llama3.2
+ollama pull nomic-embed-text
+```
+
+Log in as admin and index the knowledge once (again after changing plans or the policy file):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://localhost/api/v1/assistant/reindex -Headers @{ Authorization = "Bearer <admin token>" }
+```
+
+Then open the **Assistant** tab. The first answer can take up to a minute while the model loads.
+
 ## Local development
 
 Prerequisites: JDK 25, Maven 3.9+, Node 22, Docker.
@@ -129,7 +155,7 @@ cd backend
 mvn clean test
 ```
 
-48 integration tests cover plans, subscriptions (queue, freeze, cancel, expiry), attendance, payments,
+54 integration tests cover plans, subscriptions (queue, freeze, cancel, expiry), attendance, payments,
 the joining fee, refunds and notifications.
 
 ## Backups
@@ -150,7 +176,7 @@ does not survive that disk failing.
 | `DEVICE_API_KEY` | Shared key for the door device. At least 32 characters. Scans are refused while it is blank |
 | `EMAIL_ENABLED` | Turns email sending on (default `false`) |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` | SMTP settings |
-| `OLLAMA_BASE_URL` | Reserved for the planned AI assistant. Nothing uses it yet |
+| `OLLAMA_BASE_URL` | Where the backend finds Ollama, for example `http://host.docker.internal:11434` when Ollama runs on your PC |
 
 Never commit real values. `.env.prod` is ignored by Git, and `.env.example` contains placeholders only.
 
@@ -164,7 +190,9 @@ Never commit real values. `.env.prod` is ignored by Git, and `.env.example` cont
 - **Spring Boot 3.5 is out of free open-source support** (it ended on 2026-06-30). The app runs on the latest 3.5 patch.
   Moving to a supported release is planned.
 - **Payments are recorded manually** at the front desk. There is no online payment gateway.
-- **The AI assistant is built and integrated.** It uses RAG to answer member questions based on the gym's policy documentation. It requires a local Ollama instance with Llama 3.2.
+- **The assistant needs Ollama running on the same machine.** A cloud server could not reach a local Ollama,
+  so hosting it would need Ollama on that server (enough RAM, ideally a GPU). It answers one question at a time
+  and keeps no conversation history.
 
 ## Roadmap
 
