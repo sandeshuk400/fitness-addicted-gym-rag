@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from '../api/client'
 
@@ -109,64 +109,35 @@ function ProfileForm({ profile }: { profile: Profile }) {
 
 type Consent = { purpose: string; granted: boolean; recordedAt: string | null }
 
-function DoorConsent() {
+/** One optional consent the member can switch on or off at any time. */
+function ConsentSection({
+  purpose, title, label, children,
+}: { purpose: string; title: string; label: string; children: ReactNode }) {
   const queryClient = useQueryClient()
   const [error, setError] = useState('')
   const q = useQuery({ queryKey: ['consents'], queryFn: () => api<Consent[]>('/members/me/consents') })
-  const granted = q.data?.find((c) => c.purpose === 'BIOMETRIC_DOOR')?.granted ?? false
+  const granted = q.data?.find((c) => c.purpose === purpose)?.granted ?? false
   const change = useMutation({
     mutationFn: (g: boolean) =>
-      api('/members/me/consents/BIOMETRIC_DOOR', { method: 'PUT', body: JSON.stringify({ granted: g }) }),
+      api(`/members/me/consents/${purpose}`, { method: 'PUT', body: JSON.stringify({ granted: g }) }),
     onSuccess: () => { setError(''); queryClient.invalidateQueries({ queryKey: ['consents'] }) },
     onError: (e) => setError(e instanceof ApiError && e.message ? e.message : 'Could not save.'),
   })
 
   return (
     <div className="mt-6 rounded-xl border border-white/10 bg-forest p-5 text-sm text-neutral-300">
-      <h2 className="mb-1 font-semibold text-white">Fingerprint door access</h2>
-      <p className="text-neutral-400">
-        You can open the gym door with your fingerprint. It is stored on the door device only,
-        not in the gym&apos;s database. If you switch this off, the gym removes your access and
-        deletes your fingerprint from the device.
-      </p>
+      <h2 className="mb-1 font-semibold text-white">{title}</h2>
+      <p className="text-neutral-400">{children}</p>
       {q.isError && <p className="mt-3 text-red-300">Could not load this setting.</p>}
       {q.data && (
         <label className="mt-3 flex items-center gap-2">
-          <input type="checkbox" checked={granted} disabled={change.isPending}
-            onChange={(e) => change.mutate(e.target.checked)} />
-          I agree to fingerprint door access
-        </label>
-      )}
-      {error && <p className="mt-3 text-red-300">{error}</p>}
-    </div>
-  )
-}
-
-function AIConsent() {
-  const queryClient = useQueryClient()
-  const [error, setError] = useState('')
-  const q = useQuery({ queryKey: ['consents'], queryFn: () => api<Consent[]>('/members/me/consents') })
-  const granted = q.data?.find((c) => c.purpose === 'AI_PROCESSING')?.granted ?? false
-  const change = useMutation({
-    mutationFn: (g: boolean) =>
-      api('/members/me/consents/AI_PROCESSING', { method: 'PUT', body: JSON.stringify({ granted: g }) }),
-    onSuccess: () => { setError(''); queryClient.invalidateQueries({ queryKey: ['consents'] }) },
-    onError: (e) => setError(e instanceof ApiError && e.message ? e.message : 'Could not save.'),
-  })
-
-  return (
-    <div className="mt-6 rounded-xl border border-white/10 bg-forest p-5 text-sm text-neutral-300">
-      <h2 className="mb-1 font-semibold text-white">AI Assistant consent</h2>
-      <p className="text-neutral-400">
-        You can allow our AI assistant to process your health notes and gym data to provide personalized help.
-        Your conversations are not stored.
-      </p>
-      {q.isError && <p className="mt-3 text-red-300">Could not load this setting.</p>}
-      {q.data && (
-        <label className="mt-3 flex items-center gap-2">
-          <input type="checkbox" checked={granted} disabled={change.isPending}
-            onChange={(e) => change.mutate(e.target.checked)} />
-          I agree to AI processing of my data
+          <input
+            type="checkbox"
+            checked={granted}
+            disabled={change.isPending}
+            onChange={(e) => change.mutate(e.target.checked)}
+          />
+          {label}
         </label>
       )}
       {error && <p className="mt-3 text-red-300">{error}</p>}
@@ -184,8 +155,26 @@ export default function ProfilePage() {
       {q.isLoading && <p className="text-neutral-400">Loading...</p>}
       {q.isError && <p className="text-red-300">Could not load your profile.</p>}
       {q.data && <ProfileForm key={q.data.userId} profile={q.data} />}
-      <DoorConsent />
-      <AIConsent />
+
+      <ConsentSection
+        purpose="BIOMETRIC_DOOR"
+        title="Fingerprint door access"
+        label="I agree to fingerprint door access"
+      >
+        You can open the gym door with your fingerprint. It is stored on the door device only, not in
+        the gym database. If you switch this off, the gym removes your access and deletes your
+        fingerprint from the device.
+      </ConsentSection>
+
+      <ConsentSection
+        purpose="AI_PROCESSING"
+        title="AI assistant"
+        label="I agree to use the AI assistant"
+      >
+        The assistant answers questions about plans, prices and gym rules using information the gym has
+        provided. Only the text of your question is used. Your questions are not saved, and your health
+        notes are never sent to it. You can switch this off at any time.
+      </ConsentSection>
     </div>
   )
 }

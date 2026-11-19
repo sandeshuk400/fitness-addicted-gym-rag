@@ -20,6 +20,7 @@ import Register from './pages/Register'
 import Plans from './pages/admin/Plans'
 import Users from './pages/admin/Users'
 import Starfield from './components/Starfield'
+import Assistant from './pages/Assistant'
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { me, loading } = useAuth()
@@ -88,6 +89,8 @@ function Layout() {
               <NavLink to="/profile" className={linkClass}>Profile</NavLink>
             </>
           )}
+          <NavLink to="/assistant" className={linkClass}>Assistant</NavLink>
+          <NavLink to="/change-password" className={linkClass}>Password</NavLink>
           <NavLink to="/change-password" className={linkClass}>Password</NavLink>
         </div>
         <span className="hidden shrink-0 text-xs text-neutral-400 lg:block">
@@ -128,6 +131,8 @@ function App() {
             <Route path="/door-log" element={<RequireRole staff><DoorLog /></RequireRole>} />
             <Route path="/plans" element={<RequireAdmin><Plans /></RequireAdmin>} />
             <Route path="/users" element={<RequireAdmin><Users /></RequireAdmin>} />
+            <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/assistant" element={<Assistant />} />
             <Route path="/change-password" element={<ChangePassword />} />
           </Route>
           <Route path="*" element={<Home />} />
