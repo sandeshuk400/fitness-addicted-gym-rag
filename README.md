@@ -9,6 +9,8 @@ privacy features (consent records and an audit log) built in from the start.
 > assistant needs Ollama running on the same machine. See [Known limitations](#known-limitations) and the
 > [roadmap](#roadmap).
 
+**[Watch the 152-second demo](https://youtu.be/j68S6O_3i48)**
+
 ## Features
 
 **Roles:** Member, Staff and Admin, enforced with stateless JWT authentication and method-level authorisation.
@@ -45,6 +47,14 @@ privacy features (consent records and an audit log) built in from the start.
   and withdrawing it clears the link
 - Fingerprints are stored on the door device only. The database holds just a device user number
 - Audit log for sensitive actions such as login failures, health-note views and device linking
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Staff dashboard](docs/screenshots/dashboard.png) | ![Member page with door access and payments](docs/screenshots/member-detail.png) |
+| ![Door log with accepted, re-entry and refused scans](docs/screenshots/door-log.png) | ![AI assistant answering from the gym's plans](docs/screenshots/assistant.png) |
+| ![Member profile with consent switches](docs/screenshots/profile-consent.png) | ![Register page](docs/screenshots/register.png) |
 
 ## Architecture
 
@@ -117,6 +127,17 @@ Open <http://localhost>. The first admin account is created from `BOOTSTRAP_ADMI
 After rebuilding the backend, wait about 40 seconds and restart the frontend container
 (`docker compose -f docker-compose.prod.yml --env-file .env.prod restart frontend`), otherwise Nginx can keep
 pointing at the old backend and return a 502.
+
+### Load demo data
+
+`scripts\seed-demo.ps1` creates eight fake members with plans, payments and door scans through the real API.
+Use it on a local database only:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-demo.ps1
+```
+
+The demo members log in as `demo.member1@example.com` to `demo.member8@example.com` with the password `Demo#Pass12345`.
 
 ### Try the door without a device
 
@@ -224,6 +245,7 @@ Never commit real values. `.env.prod` is ignored by Git, and `.env.example` cont
 - **Spring Boot 3.5 is out of free open-source support** (it ended on 2026-06-30). The app runs on the latest 3.5
   patch. Moving to a supported release is planned.
 - **Payments are recorded manually** at the front desk. There is no online payment gateway.
+- **The demo script uses a shared, well-known password** for its fake members. Run it on a local database only.
 
 ## Roadmap
 
@@ -250,7 +272,10 @@ fitness-addicted-gym-rag/
 │       ├── db/migration/     Flyway migrations
 │       └── knowledge/        Policy text the assistant answers from
 ├── frontend/                 React + TypeScript app, served by Nginx in Docker
-├── docs/                     Architecture and ER diagram
+├── docs/
+│   └── screenshots/          Images used in this README
+├── scripts/
+│   └── seed-demo.ps1         Loads fake demo data through the API
 ├── docker-compose.yml        Development database (optional Ollama)
 ├── docker-compose.prod.yml   Database, backend and frontend
 ├── backup.ps1                Database backup script
@@ -259,4 +284,4 @@ fitness-addicted-gym-rag/
 
 ## License
 
-To be decided (MIT is a common choice for portfolio projects).
+MIT. See [LICENSE](LICENSE).
