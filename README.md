@@ -206,9 +206,7 @@ The assistant tests mock the model and the vector store, so they need neither Ol
 cd backend
 mvn clean test
 ```
-
-They cover plans, subscriptions (queue, freeze, cancel, expiry), attendance, payments, the joining fee, refunds,
-notifications, and the assistant rules (consent, no model call without a match, source selection, model failure).
+The suite has 54 tests, all passing. They cover plans, subscriptions (queue, freeze, cancel, expiry), attendance, payments, the joining fee, refunds, notifications, and the assistant rules (consent, no model call without a match, source selection, model failure).
 
 ## Backups
 
